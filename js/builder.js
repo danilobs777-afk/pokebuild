@@ -98,6 +98,15 @@ const Builder = (() => {
     return GAME_VERSIONS.find(v => v.key === fmt)?.gen === 9;
   }
 
+  function builderGen() {
+    if (isChampions) return 9;
+    const fmt = document.getElementById('bld-format')?.value;
+    return GAME_VERSIONS.find(v => v.key === fmt)?.gen ?? 9;
+  }
+  function hasAbility() { return builderGen() >= 3; }
+  function hasNature()  { return builderGen() >= 3; }
+  function hasItem()    { return builderGen() >= 2; }
+
   function buildSlotHTML(i) {
     const slot = slots[i];
     const typeOpts = TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -148,10 +157,10 @@ const Builder = (() => {
             </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
+        ${hasNature() ? `<div style="display:flex;align-items:center;gap:6px">
           <select class="select-input bld-nature" data-slot="${i}" style="width:130px">${natureOpts}</select>
           <span class="nature-indicator" id="bld-nat-ind-${i}">${natureIndicatorHTML(slot.nature)}</span>
-        </div>
+        </div>` : ''}
       </div>
 
       ${hasTera() ? `
@@ -164,7 +173,7 @@ const Builder = (() => {
       </div>` : ''}
 
       <div class="bld-fields">
-        <div class="field-group">
+        ${hasAbility() ? `<div class="field-group">
           <label class="field-label">Habilidade</label>
           <div class="autocomplete-wrap">
             <input type="text" class="text-input bld-ability" data-slot="${i}"
@@ -172,8 +181,8 @@ const Builder = (() => {
             <ul class="suggestions hidden bld-ability-sug" data-slot="${i}"></ul>
           </div>
           <em class="ability-hidden-tag hidden" id="bld-ability-hidden-${i}">(oculta)</em>
-        </div>
-        <div class="field-group">
+        </div>` : ''}
+        ${hasItem() ? `<div class="field-group">
           <label class="field-label">Item</label>
           <div style="display:flex;align-items:center;gap:6px">
             <img id="bld-item-img-${i}" class="bld-item-img${slot.item ? '' : ' hidden'}"
@@ -185,7 +194,7 @@ const Builder = (() => {
               <ul class="suggestions hidden bld-item-sug" data-slot="${i}"></ul>
             </div>
           </div>
-        </div>
+        </div>` : ''}
       </div>
 
       <div class="section-divider">Moves</div>
@@ -887,14 +896,15 @@ const Builder = (() => {
         lines.push(`SP Spread: ${STAT_KEYS.map(k => `${STAT_LABELS[k]} ${slot.evs[k]}`).join(' / ')}`);
         slot.moves.filter(m => m).forEach(m => lines.push(`- ${m}`));
       } else {
-        lines.push(`${slot.name} @ ${slot.item || '(sem item)'}`);
-        lines.push(`Ability: ${slot.ability || '(sem habilidade)'}`);
+        const g = builderGen();
+        lines.push(g >= 2 ? `${slot.name} @ ${slot.item || '(sem item)'}` : slot.name);
+        if (g >= 3) lines.push(`Ability: ${slot.ability || '(sem habilidade)'}`);
         if (slot.shiny) lines.push('Shiny: Yes');
         if (slot.teraType) lines.push(`Tera Type: ${slot.teraType}`);
         lines.push(`Level: ${slot.level}`);
         const evParts = STAT_KEYS.filter(k => slot.evs[k] > 0).map(k => `${slot.evs[k]} ${STAT_LABELS[k]}`);
         if (evParts.length) lines.push(`EVs: ${evParts.join(' / ')}`);
-        lines.push(`${slot.nature} Nature`);
+        if (g >= 3) lines.push(`${slot.nature} Nature`);
         const ivParts = STAT_KEYS.filter(k => slot.ivs[k] !== 31).map(k => `${slot.ivs[k]} ${STAT_LABELS[k]}`);
         if (ivParts.length) lines.push(`IVs: ${ivParts.join(' / ')}`);
         slot.moves.filter(m => m).forEach(m => lines.push(`- ${m}`));
