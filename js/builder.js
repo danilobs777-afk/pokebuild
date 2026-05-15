@@ -437,6 +437,20 @@ const Builder = (() => {
         itemImg.classList.remove('hidden');
         itemImg.onerror = () => itemImg.classList.add('hidden');
       }
+      // Auto-switch para Mega Evolução quando a Mega Stone corresponde ao Pokémon atual
+      const megaForm = MEGA_STONE_MAP[value];
+      if (megaForm) {
+        const megaBase    = FORM_BASE[megaForm];
+        const currentBase = FORM_BASE[slots[i].name] || slots[i].name;
+        if (megaBase && megaBase === currentBase && POKEMON_DB[megaForm]) {
+          slots[i].name = megaForm;
+          const pkInput = document.querySelector(`.bld-pkmn-input[data-slot="${i}"]`);
+          if (pkInput) pkInput.value = megaForm;
+          refreshFormSwitcher(i, megaForm);
+          refreshTypeBadges(i, megaForm);
+          loadSprite(i, megaForm, true);
+        }
+      }
     });
 
     document.addEventListener('click', e => {
