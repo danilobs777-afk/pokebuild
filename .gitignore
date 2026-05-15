@@ -1,0 +1,13 @@
+# Claude Code local settings
+.claude/
+
+# Reference files (HTML prototypes, not part of the app)
+_references/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp

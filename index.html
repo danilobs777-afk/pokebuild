@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéBuild – Team Builder & Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="app-nav">
+  <div class="nav-logo">⬡ PokéBuild</div>
+  <div class="nav-links">
+    <button class="nav-btn active" data-view="type-calc">Type Calc</button>
+    <button class="nav-btn" data-view="analyzer">Team Analyzer</button>
+    <button class="nav-btn" data-view="builder">Team Builder</button>
+    <button class="nav-btn" data-view="my-teams">My Teams</button>
+    <span class="nav-sep"></span>
+    <button class="nav-btn nav-btn-extra" data-view="damage-sim">Damage Simulator</button>
+  </div>
+</nav>
+
+<div class="gen-bar">
+  <span class="gen-bar-label">Geração:</span>
+  <button class="gen-btn active" data-gen="gen6plus">Gen 6+</button>
+  <button class="gen-btn" data-gen="gen2to5">Gen 2–5</button>
+  <button class="gen-btn" data-gen="gen1">Gen 1</button>
+</div>
+
+<main class="app-main">
+
+  <!-- ═══════════════════════════════════════════════════
+       VIEW 1 – TYPE CALCULATOR
+  ═══════════════════════════════════════════════════ -->
+  <section id="view-type-calc" class="view active">
+    <div class="view-header">
+      <h1 class="view-title">Type Calc</h1>
+      <p class="view-sub">// mono · dual · tera — defensive effectiveness</p>
+    </div>
+
+    <div class="tc-layout">
+
+      <!-- LEFT: input panel -->
+      <div class="card tc-input-card">
+        <div class="card-title">// configurar pokémon</div>
+
+        <div id="tc-sprite-wrap" class="tc-sprite-wrap">
+          <div id="tc-sprite-placeholder" class="tc-sprite-placeholder">?</div>
+          <img id="tc-sprite-img" class="tc-sprite-img hidden" alt="">
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Nome do Pokémon</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="tc-pkmn-input" class="text-input" placeholder="Digite para buscar..." autocomplete="off">
+            <ul id="tc-pkmn-suggestions" class="suggestions hidden"></ul>
+            <div id="tc-form-switcher"></div>
+          </div>
+        </div>
+
+        <div class="tc-selectors">
+          <div>
+            <label class="field-label">Tipo Primário</label>
+            <select id="tc-type1" class="select-input"></select>
+          </div>
+          <div>
+            <label class="field-label">Tipo Secundário</label>
+            <select id="tc-type2" class="select-input"></select>
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-top:12px;">
+          <label class="field-label">✦ Tera Type</label>
+          <select id="tc-tera" class="select-input tera-select"></select>
+        </div>
+        <div class="ttoggle-row" id="tc-tera-toggle-wrap" style="margin-top:10px;opacity:0.35;pointer-events:none;">
+          <span>Calcular com Tera</span>
+          <label class="ttoggle">
+            <input type="checkbox" id="tc-tera-toggle">
+            <span class="tslider"></span>
+          </label>
+        </div>
+
+        <button class="btn-primary" id="tc-calc-btn" style="margin-top:16px;">⚔ CALCULAR</button>
+      </div>
+
+      <!-- RIGHT: results -->
+      <div id="tc-results" class="hidden">
+        <div class="tabs">
+          <button class="tab-btn-ui active" data-tab="tc-original" id="tc-tab-original">Defensivo</button>
+          <button class="tab-btn-ui" data-tab="tc-offensive" id="tc-tab-offensive">Ofensivo</button>
+        </div>
+
+        <div id="tc-original" class="tab-panel active">
+          <div class="card">
+            <div class="card-title" id="tc-original-title"></div>
+            <div id="tc-original-badges" class="tc-type-badges"></div>
+            <div id="tc-original-summary" class="tc-summary-bar"></div>
+            <div id="tc-original-grid" class="tc-eff-grid"></div>
+          </div>
+        </div>
+
+        <div id="tc-offensive" class="tab-panel">
+          <div class="card">
+            <div class="card-title" id="tc-offensive-title"></div>
+            <div id="tc-offensive-badges" class="tc-type-badges"></div>
+            <div id="tc-offensive-summary" class="tc-summary-bar"></div>
+            <div id="tc-offensive-grid" class="tc-eff-grid"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════
+       VIEW 2 – TEAM ANALYZER
+  ═══════════════════════════════════════════════════ -->
+  <section id="view-analyzer" class="view">
+    <div class="view-header">
+      <h1 class="view-title">Team Analyzer</h1>
+      <p class="view-sub">Analise cobertura ofensiva e defensiva de um time completo</p>
+    </div>
+
+    <!-- Team input grid -->
+    <div class="team-grid" id="az-team-grid">
+      <!-- 6 slots rendered by JS -->
+    </div>
+
+    <div class="az-action-grid">
+      <button class="btn-secondary" id="az-import-btn">⬆ Importar Time</button>
+      <button class="btn-secondary" id="az-to-builder-btn" disabled>→ Team Builder</button>
+      <button class="btn-primary"   id="az-analyze-btn">Analisar Time</button>
+      <button class="btn-secondary" id="az-clear-btn" disabled>Limpar</button>
+    </div>
+
+    <!-- Import modal -->
+    <div id="az-import-modal" class="modal-overlay hidden">
+      <div class="modal-box az-import-box">
+        <h3>Importar Time</h3>
+        <div class="modal-tabs-sm">
+          <button class="modal-tab-sm active" data-itab="smogon">Formato Smogon</button>
+          <button class="modal-tab-sm" data-itab="saved">Times Salvos</button>
+        </div>
+
+        <div id="az-itab-smogon" class="itab-panel">
+          <p class="hint-text">Cole o texto no formato Smogon ou carregue um arquivo <code>.txt</code></p>
+          <textarea id="az-smogon-text" class="smogon-area" placeholder="Pikachu @ Light Ball&#10;Ability: Static&#10;Tera Type: Electric&#10;- Thunderbolt&#10;- Volt Switch&#10;- Hidden Power Ice&#10;- Surf&#10;&#10;Charizard @ Choice Specs&#10;..."></textarea>
+          <div class="modal-actions">
+            <label class="btn-secondary btn-file-label">
+              Arquivo .txt
+              <input type="file" id="az-smogon-file" accept=".txt,.showdown" style="display:none">
+            </label>
+            <button class="btn-secondary" id="az-import-cancel">Cancelar</button>
+            <button class="btn-primary" id="az-smogon-import">Importar</button>
+          </div>
+        </div>
+
+        <div id="az-itab-saved" class="itab-panel hidden">
+          <div id="az-saved-list" class="az-saved-list"></div>
+          <div class="modal-actions">
+            <button class="btn-secondary" id="az-import-cancel2">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results tabs -->
+    <div id="az-results" class="hidden">
+      <div class="tabs">
+        <button class="tab-btn-ui active" data-tab="az-coverage">Coverage</button>
+        <button class="tab-btn-ui" data-tab="az-matchup">Matchup</button>
+        <button class="tab-btn-ui" data-tab="az-weakness">Weakness</button>
+        <button class="tab-btn-ui" data-tab="az-synergy">Synergy</button>
+      </div>
+
+      <div id="az-coverage" class="tab-panel active">
+        <div class="om-tera-bar">
+          <span class="om-tera-label">Tera Blast</span>
+          <button class="om-tera-toggle" id="az-cov-tera-toggle" aria-pressed="false">
+            <span class="om-tera-knob"></span>
+          </button>
+        </div>
+        <div id="az-cov-sum" class="sum-bar s3"></div>
+        <div id="az-cov-grid" class="cov-grid"></div>
+      </div>
+
+      <div id="az-matchup" class="tab-panel">
+        <div class="om-tera-bar">
+          <span class="om-tera-label">Tera Blast</span>
+          <button class="om-tera-toggle" id="az-om-tera-toggle" aria-pressed="false">
+            <span class="om-tera-knob"></span>
+          </button>
+        </div>
+        <div id="az-matchup-content"></div>
+      </div>
+
+      <div id="az-weakness" class="tab-panel">
+        <div class="ttoggle-row">
+          <span>Calcular com Tera</span>
+          <label class="ttoggle">
+            <input type="checkbox" id="az-tera-toggle">
+            <span class="tslider"></span>
+          </label>
+        </div>
+        <div id="az-weakness-content"></div>
+      </div>
+
+      <div id="az-synergy" class="tab-panel">
+        <div id="az-synergy-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════
+       VIEW 3 – TEAM BUILDER
+  ═══════════════════════════════════════════════════ -->
+  <section id="view-builder" class="view">
+    <div class="view-header">
+      <h1 class="view-title">Team Builder</h1>
+      <p class="view-sub">Monte e salve seu time com builds completas no estilo Smogon</p>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0">Configurações do Time</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="om-tera-label" style="color:var(--gold)">Pokémon Champions</span>
+          <button id="bld-champions-toggle" class="om-tera-toggle bld-champ-toggle" role="switch" aria-pressed="false">
+            <span class="om-tera-knob"></span>
+          </button>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="field-group" style="flex:1;min-width:180px;">
+          <label class="field-label">Nome do Time</label>
+          <input type="text" id="bld-team-name" class="text-input" placeholder="Ex: Rain HO" maxlength="60">
+        </div>
+        <div class="field-group" style="flex:1;min-width:200px;">
+          <label class="field-label">Versão / Formato</label>
+          <select id="bld-format" class="select-input">
+            <!-- Options rendered by JS from GAME_VERSIONS (Champions excluded) -->
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Builder slots -->
+    <div id="bld-slots">
+      <!-- 6 .builder-slot cards rendered by JS -->
+    </div>
+
+    <div class="bld-action-grid">
+      <button class="btn-secondary" id="bld-import-btn">⬆ Importar Time</button>
+      <button class="btn-secondary" id="bld-export-btn"   disabled>⬇ Exportar Time</button>
+      <button class="btn-primary"   id="bld-validate-btn">Validar &amp; Salvar Time</button>
+      <button class="btn-secondary" id="bld-clear-btn"    disabled>Limpar</button>
+    </div>
+
+    <div id="bld-validation-box" class="validation-box hidden"></div>
+
+    <!-- Modal de importação -->
+    <div id="bld-import-modal" class="modal-overlay hidden">
+      <div class="modal-box az-import-box">
+        <h3>Importar Time</h3>
+        <div class="modal-tabs-sm">
+          <button class="modal-tab-sm active" data-bitab="smogon">Formato Smogon</button>
+          <button class="modal-tab-sm" data-bitab="saved">Times Salvos</button>
+        </div>
+
+        <div id="bld-itab-smogon" class="itab-panel">
+          <p class="hint-text">Cole o texto no formato Smogon ou carregue um arquivo <code>.txt</code></p>
+          <textarea id="bld-smogon-text" class="smogon-area" placeholder="Pikachu @ Light Ball&#10;Ability: Static&#10;EVs: 252 SpA / 4 HP / 252 Spe&#10;Timid Nature&#10;- Thunderbolt&#10;- Volt Switch&#10;- Hidden Power Ice&#10;- Surf&#10;&#10;Charizard @ Choice Specs&#10;..."></textarea>
+          <div class="modal-actions">
+            <label class="btn-secondary btn-file-label">
+              Arquivo .txt
+              <input type="file" id="bld-smogon-file" accept=".txt,.showdown" style="display:none">
+            </label>
+            <button class="btn-secondary" id="bld-import-cancel">Cancelar</button>
+            <button class="btn-primary" id="bld-smogon-import">Importar</button>
+          </div>
+        </div>
+
+        <div id="bld-itab-saved" class="itab-panel hidden">
+          <div id="bld-saved-list" class="az-saved-list"></div>
+          <div class="modal-actions">
+            <button class="btn-secondary" id="bld-import-cancel2">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════
+       VIEW 4 – MY TEAMS
+  ═══════════════════════════════════════════════════ -->
+  <section id="view-my-teams" class="view">
+    <div class="view-header">
+      <h1 class="view-title">My Teams</h1>
+      <p class="view-sub">Times salvos – clique para ver detalhes</p>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <input type="text" id="mt-search" class="text-input" placeholder="Buscar por nome do time ou Pokémon…" style="width:100%;max-width:420px;">
+    </div>
+
+    <div id="mt-gallery" class="teams-grid">
+      <!-- Team cards rendered by JS -->
+    </div>
+
+    <div id="mt-empty" class="empty-state hidden">
+      <p>Nenhum time salvo ainda.<br>Use o <strong>Team Builder</strong> para criar e salvar seu primeiro time!</p>
+    </div>
+
+    <!-- Team detail overlay -->
+    <div id="mt-detail" class="hidden">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
+        <button class="btn-secondary" id="mt-back-btn">← Voltar</button>
+        <button class="btn-secondary" id="mt-detail-rename-btn">✎ Renomear</button>
+        <button class="btn-secondary" id="mt-detail-export-btn">Exportar</button>
+        <button class="btn-secondary" id="mt-detail-edit-btn">✎ Editar no Builder</button>
+        <button class="btn-danger" id="mt-detail-delete-btn">Excluir Time</button>
+      </div>
+      <div id="mt-detail-header" class="detail-header"></div>
+      <div id="mt-detail-builds" class="builds-grid"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════
+       VIEW 5 – DAMAGE SIMULATOR
+  ═══════════════════════════════════════════════════ -->
+  <section id="view-damage-sim" class="view">
+    <div class="view-header">
+      <h1 class="view-title">Damage Simulator</h1>
+      <p class="view-sub">Calcule dano exato com 16 rolls (85–100%) e KO percentual</p>
+    </div>
+
+    <div class="dmg-layout">
+      <!-- Attacker -->
+      <div class="card" id="dmg-attacker-card">
+        <div class="card-title">Atacante</div>
+        <div id="dmg-atk-form">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Move -->
+      <div class="card" id="dmg-move-card">
+        <div class="card-title">Golpe</div>
+        <div class="field-group">
+          <label class="field-label">Nome do Golpe</label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="dmg-move-input" class="text-input" placeholder="Ex: Earthquake" autocomplete="off">
+            <ul id="dmg-move-suggestions" class="suggestions hidden"></ul>
+          </div>
+        </div>
+        <div id="dmg-move-info" class="hidden">
+          <div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;">
+            <span id="dmg-move-type-pill" class="tpill"></span>
+            <span id="dmg-move-category" style="font-size:12px;color:var(--text2);"></span>
+            <span style="font-size:12px;color:var(--text2);">Base Power: <strong id="dmg-move-bp">—</strong></span>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Modificadores</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <label class="check-label"><input type="checkbox" id="dmg-crit"> Crítico</label>
+            <label class="check-label"><input type="checkbox" id="dmg-burned"> Queimado (Atk÷2 + chip)</label>
+            <label class="check-label"><input type="checkbox" id="dmg-stab"> STAB</label>
+            <label class="check-label"><input type="checkbox" id="dmg-trick-room"> Trick Room</label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Clima / Campo</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="dmg-weather" class="select-input" style="flex:1">
+              <option value="none">Sem clima</option>
+              <option value="sun">Sol (Fire ×1.5 / Water ×0.5)</option>
+              <option value="rain">Chuva (Water ×1.5 / Fire ×0.5)</option>
+              <option value="sand">Areia (Rock Sp.Def ×1.5)</option>
+              <option value="snow">Neve (Ice Sp.Def ×1.5)</option>
+            </select>
+            <select id="dmg-terrain" class="select-input" style="flex:1">
+              <option value="none">Sem terrain</option>
+              <option value="electric-terrain">Campo Elétrico (Elec ×1.3)</option>
+              <option value="grassy-terrain">Campo Gramado (Grass ×1.3 / EQ ×0.5)</option>
+              <option value="psychic-terrain">Campo Psíquico (Psy ×1.3)</option>
+              <option value="misty-terrain">Campo de Névoa (Dragon ×0.5)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Efetividade de Tipo</label>
+          <select id="dmg-eff" class="select-input">
+            <option value="0">0× (imune)</option>
+            <option value="0.25">¼× (dupla resist)</option>
+            <option value="0.5">½× (resist)</option>
+            <option value="1" selected>1× (neutro)</option>
+            <option value="2">2× (fraco)</option>
+            <option value="4">4× (fraqueza dupla)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Status do Defensor (end-of-turn)</label>
+          <select id="dmg-def-status" class="select-input">
+            <option value="none">Nenhum</option>
+            <option value="poison">Envenenado (1/8 HP/turno)</option>
+            <option value="toxic">Tóxico (1/16, 2/16, 3/16…)</option>
+            <option value="burn">Queimado (1/16 HP/turno)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Item passivo do Defensor</label>
+          <select id="dmg-def-passive-item" class="select-input">
+            <option value="none">Nenhum</option>
+            <option value="leftovers">Leftovers (+1/16 HP/turno)</option>
+            <option value="black-sludge-poison">Black Sludge (Poison: +1/16 HP)</option>
+            <option value="black-sludge-other">Black Sludge (outro tipo: −1/8 HP)</option>
+            <option value="grassy-seed">Grassy Seed / Terrain Seed</option>
+          </select>
+        </div>
+        <button class="btn-primary" id="dmg-calc-btn" style="margin-top:12px;width:100%">Calcular Dano</button>
+      </div>
+
+      <!-- Defender -->
+      <div class="card" id="dmg-defender-card">
+        <div class="card-title">Defensor</div>
+        <div id="dmg-def-form">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="dmg-results" class="card hidden" style="margin-top:18px;">
+      <div class="card-title">Resultado</div>
+      <div id="dmg-hp-bar-wrap" class="dmg-hp-bar-wrap">
+        <div id="dmg-hp-bar-bg" class="dmg-hp-bar-bg">
+          <div id="dmg-range-overlay" class="dmg-range-overlay"></div>
+        </div>
+        <div id="dmg-hp-label" style="font-size:12px;color:var(--text2);margin-top:4px;"></div>
+      </div>
+      <div id="dmg-rolls" class="dmg-rolls"></div>
+      <div id="dmg-summary" class="dmg-summary"></div>
+      <div id="dmg-ko-badges" class="dmg-ko-badges"></div>
+      <div id="dmg-endturn-notes" style="margin-top:10px;font-size:12px;color:var(--text2);line-height:1.8;"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Export modal -->
+<div id="export-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <strong>Exportar Time</strong>
+      <button class="btn-secondary" id="modal-close-btn">✕</button>
+    </div>
+    <textarea id="export-text" class="export-textarea" readonly></textarea>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+      <button class="btn-primary" id="modal-copy-btn" style="width:100%;margin-bottom:0">Copiar para Área de Transferência</button>
+      <button class="btn-secondary" id="modal-download-btn" style="width:100%">Salvar .txt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div id="confirm-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:380px;">
+    <p id="confirm-msg" style="margin-bottom:16px;"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn-secondary" id="confirm-cancel-btn">Cancelar</button>
+      <button class="btn-danger" id="confirm-ok-btn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/typeCalc.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/builder.js"></script>
+<script src="js/teams.js"></script>
+<script src="js/dmgCalc.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
