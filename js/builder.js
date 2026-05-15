@@ -88,6 +88,7 @@ const Builder = (() => {
   function effectiveName(slot) {
     if (slot.gender === 'female' && GENDER_VARIANTS[slot.name])
       return GENDER_VARIANTS[slot.name];
+    if (slot.name.endsWith('-Gmax')) return FORM_BASE[slot.name] || slot.name;
     return slot.name;
   }
 
@@ -901,9 +902,12 @@ const Builder = (() => {
     const lines = [];
     slots.forEach(slot => {
       if (!slot.name.trim()) return;
+      const isGmax = slot.name.endsWith('-Gmax');
+      const exportName = isGmax ? (FORM_BASE[slot.name] || slot.name) : slot.name;
       if (isChampions) {
-        lines.push(`${slot.name} @ ${slot.item || '(sem item)'}`);
+        lines.push(`${exportName} @ ${slot.item || '(sem item)'}`);
         lines.push(`Ability: ${slot.ability || '(sem habilidade)'}`);
+        if (isGmax) lines.push('Gigantamax: Yes');
         if (slot.shiny) lines.push('Shiny: Yes');
         if (slot.teraType) lines.push(`Tera Type: ${slot.teraType}`);
         lines.push(`Nature: ${slot.nature}`);
@@ -911,8 +915,9 @@ const Builder = (() => {
         slot.moves.filter(m => m).forEach(m => lines.push(`- ${m}`));
       } else {
         const g = builderGen();
-        lines.push(g >= 2 ? `${slot.name} @ ${slot.item || '(sem item)'}` : slot.name);
+        lines.push(g >= 2 ? `${exportName} @ ${slot.item || '(sem item)'}` : exportName);
         if (g >= 3) lines.push(`Ability: ${slot.ability || '(sem habilidade)'}`);
+        if (isGmax) lines.push('Gigantamax: Yes');
         if (slot.shiny) lines.push('Shiny: Yes');
         if (slot.teraType) lines.push(`Tera Type: ${slot.teraType}`);
         lines.push(`Level: ${slot.level}`);
@@ -1004,16 +1009,17 @@ const Builder = (() => {
       const rawName = inParen ? inParen[1].trim() : (header.split('@')[0]).trim();
       const itemM = header.match(/@\s*(.+)$/);
       const item = itemM ? itemM[1].trim() : '';
-      let ability = '', teraType = '', nature = 'Hardy', evsStr = '', ivsStr = '', shiny = false;
+      let ability = '', teraType = '', nature = 'Hardy', evsStr = '', ivsStr = '', shiny = false, gmax = false;
       const moves = [];
       for (let i = 1; i < lines.length; i++) {
         const l = lines[i];
-        if      (l.startsWith('Ability:'))   ability  = l.slice(8).trim();
-        else if (l.startsWith('Tera Type:')) teraType = l.slice(10).trim();
-        else if (l.startsWith('Shiny:'))     shiny    = l.slice(6).trim().toLowerCase() === 'yes';
-        else if (l.startsWith('EVs:'))       evsStr   = l.slice(4).trim();
-        else if (l.startsWith('IVs:'))       ivsStr   = l.slice(4).trim();
-        else if (l.endsWith('Nature'))       nature   = l.split(' ')[0];
+        if      (l.startsWith('Ability:'))    ability  = l.slice(8).trim();
+        else if (l.startsWith('Tera Type:'))  teraType = l.slice(10).trim();
+        else if (l.startsWith('Shiny:'))      shiny    = l.slice(6).trim().toLowerCase() === 'yes';
+        else if (l.startsWith('Gigantamax:')) gmax     = l.slice(11).trim().toLowerCase() === 'yes';
+        else if (l.startsWith('EVs:'))        evsStr   = l.slice(4).trim();
+        else if (l.startsWith('IVs:'))        ivsStr   = l.slice(4).trim();
+        else if (l.endsWith('Nature'))        nature   = l.split(' ')[0];
         else if (l.startsWith('- ') && moves.length < 4) moves.push(l.slice(2).trim());
       }
       return {
@@ -1022,6 +1028,7 @@ const Builder = (() => {
         ability,
         teraType,
         shiny,
+        gmax,
         nature: Object.keys(NATURES).includes(nature) ? nature : 'Hardy',
         evs: parseStatStr(evsStr, 0, isChampions ? 32 : 252),
         ivs: parseStatStr(ivsStr, 31, 31),
@@ -1034,7 +1041,12 @@ const Builder = (() => {
     slots = Array.from({ length: SLOTS }, emptySlot);
     parsed.forEach((p, i) => {
       if (i >= SLOTS) return;
-      slots[i].name     = p.name;
+      let name = p.name;
+      if (p.gmax) {
+        const gmaxForm = name + '-Gmax';
+        if (POKEMON_DB[gmaxForm]) name = gmaxForm;
+      }
+      slots[i].name     = name;
       slots[i].item     = p.item;
       slots[i].ability  = p.ability;
       slots[i].teraType = p.teraType;

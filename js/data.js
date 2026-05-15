@@ -249,6 +249,14 @@ const ITEMS = [
   'Sharpedonite','Cameruptite','Altarianite','Banettite','Absolite','Glalitite',
   'Salamencite','Metagrossite','Latiasite','Latiosite',
   'Lucarionite','Garchompite','Lopunnite','Abomasite','Galladite','Audinite','Diancite',
+  // Z-Crystals de tipo (Gen 7)
+  'Normalium Z','Firium Z','Waterium Z','Electrium Z','Grassium Z','Icium Z',
+  'Fightinium Z','Poisonium Z','Groundium Z','Flyinium Z','Psychium Z','Buginium Z',
+  'Rockium Z','Ghostium Z','Steelium Z','Dragonium Z','Darkinium Z','Fairium Z',
+  // Z-Crystals específicos de Pokémon (Gen 7)
+  'Pikanium Z','Pikashunium Z','Aloraichium Z','Snorlium Z','Mewnium Z','Eevium Z',
+  'Decidium Z','Incinium Z','Primarium Z','Tapunium Z','Marshadium Z',
+  'Lycanium Z','Kommonium Z','Mimikium Z','Solganium Z','Lunalium Z','Ultranecrozium Z',
 ];
 
 // ── Mega Stones: pedra → forma Mega ───────────────────────────────────────────
@@ -326,7 +334,19 @@ const POKEMON_DB = {"Abomasnow":["Grass","Ice"],"Abra":["Psychic",null],"Absol":
 "Latias-Mega":["Dragon","Psychic"],"Latios-Mega":["Dragon","Psychic"],"Rayquaza-Mega":["Dragon","Flying"],
 "Lucario-Mega":["Fighting","Steel"],"Garchomp-Mega":["Dragon","Ground"],"Lopunny-Mega":["Normal","Fighting"],
 "Abomasnow-Mega":["Grass","Ice"],"Gallade-Mega":["Psychic","Fighting"],
-"Audino-Mega":["Normal","Fairy"],"Diancie-Mega":["Rock","Fairy"]};
+"Audino-Mega":["Normal","Fairy"],"Diancie-Mega":["Rock","Fairy"],
+"Venusaur-Gmax":["Grass","Poison"],"Charizard-Gmax":["Fire","Flying"],"Blastoise-Gmax":["Water",null],
+"Butterfree-Gmax":["Bug","Flying"],"Pikachu-Gmax":["Electric",null],"Meowth-Gmax":["Normal",null],
+"Machamp-Gmax":["Fighting",null],"Gengar-Gmax":["Ghost","Poison"],"Kingler-Gmax":["Water",null],
+"Lapras-Gmax":["Water","Ice"],"Eevee-Gmax":["Normal",null],"Snorlax-Gmax":["Normal",null],
+"Garbodor-Gmax":["Poison",null],"Melmetal-Gmax":["Steel",null],
+"Rillaboom-Gmax":["Grass",null],"Cinderace-Gmax":["Fire",null],"Inteleon-Gmax":["Water",null],
+"Corviknight-Gmax":["Flying","Steel"],"Orbeetle-Gmax":["Bug","Psychic"],"Drednaw-Gmax":["Water","Rock"],
+"Coalossal-Gmax":["Rock","Fire"],"Flapple-Gmax":["Grass","Dragon"],"Appletun-Gmax":["Grass","Dragon"],
+"Sandaconda-Gmax":["Ground",null],"Toxtricity-Gmax":["Electric","Poison"],"Centiskorch-Gmax":["Fire","Bug"],
+"Hatterene-Gmax":["Psychic","Fairy"],"Grimmsnarl-Gmax":["Dark","Fairy"],"Alcremie-Gmax":["Fairy",null],
+"Copperajah-Gmax":["Steel",null],"Duraludon-Gmax":["Steel","Dragon"],
+"Urshifu-Gmax":["Fighting","Dark"],"Urshifu-Rapid-Strike-Gmax":["Fighting","Water"]};
 
 // ── Formas alternativas ───────────────────────────────────────────────────────
 // Agrupa base → [formas]. A chave é o nome base (existe em POKEMON_DB).
@@ -356,14 +376,14 @@ const POKEMON_FORMS = {
   'Oricorio':    ['Oricorio','Oricorio-Pa-U','Oricorio-Pom-Pom','Oricorio-Sensu'],
   'Necrozma':    ['Necrozma','Necrozma-Dusk-Mane','Necrozma-Dawn-Wings','Necrozma-Ultra'],
   'Zygarde':     ['Zygarde','Zygarde-10','Zygarde-Complete'],
-  'Toxtricity':  ['Toxtricity','Toxtricity-Low-Key'],
+  'Toxtricity':  ['Toxtricity','Toxtricity-Gmax','Toxtricity-Low-Key'],
   'Morpeko':     ['Morpeko','Morpeko-Hangry'],
   'Eiscue':      ['Eiscue','Eiscue-Noice'],
   'Dialga':      ['Dialga','Dialga-Origin'],
   'Palkia':      ['Palkia','Palkia-Origin'],
   'Zacian':      ['Zacian','Zacian-Crowned'],
   'Zamazenta':   ['Zamazenta','Zamazenta-Crowned'],
-  'Urshifu':     ['Urshifu','Urshifu-Rapid-Strike'],
+  'Urshifu':     ['Urshifu','Urshifu-Gmax','Urshifu-Rapid-Strike','Urshifu-Rapid-Strike-Gmax'],
   'Calyrex':     ['Calyrex','Calyrex-Ice-Rider','Calyrex-Shadow-Rider'],
   'Enamorus':    ['Enamorus','Enamorus-Therian'],
   'Palafin':     ['Palafin','Palafin-Hero'],
@@ -385,7 +405,7 @@ const POKEMON_FORMS = {
   'Ninetales':   ['Ninetales','Ninetales-Alola'],
   'Diglett':     ['Diglett','Diglett-Alola'],
   'Dugtrio':     ['Dugtrio','Dugtrio-Alola'],
-  'Meowth':      ['Meowth','Meowth-Alola','Meowth-Galar'],
+  'Meowth':      ['Meowth','Meowth-Gmax','Meowth-Alola','Meowth-Galar'],
   'Persian':     ['Persian','Persian-Alola'],
   'Geodude':     ['Geodude','Geodude-Alola'],
   'Graveler':    ['Graveler','Graveler-Alola'],
@@ -431,13 +451,13 @@ const POKEMON_FORMS = {
   'Basculin':    ['Basculin','Basculin-Blue-Striped'],
   'Mimikyu':     ['Mimikyu','Mimikyu-Busted'],
   // Mega Evoluções (Gen 6–7)
-  'Venusaur':   ['Venusaur','Venusaur-Mega'],
-  'Charizard':  ['Charizard','Charizard-Mega-X','Charizard-Mega-Y'],
-  'Blastoise':  ['Blastoise','Blastoise-Mega'],
+  'Venusaur':   ['Venusaur','Venusaur-Mega','Venusaur-Gmax'],
+  'Charizard':  ['Charizard','Charizard-Mega-X','Charizard-Mega-Y','Charizard-Gmax'],
+  'Blastoise':  ['Blastoise','Blastoise-Mega','Blastoise-Gmax'],
   'Beedrill':   ['Beedrill','Beedrill-Mega'],
   'Pidgeot':    ['Pidgeot','Pidgeot-Mega'],
   'Alakazam':   ['Alakazam','Alakazam-Mega'],
-  'Gengar':     ['Gengar','Gengar-Mega'],
+  'Gengar':     ['Gengar','Gengar-Mega','Gengar-Gmax'],
   'Kangaskhan': ['Kangaskhan','Kangaskhan-Mega'],
   'Pinsir':     ['Pinsir','Pinsir-Mega'],
   'Gyarados':   ['Gyarados','Gyarados-Mega'],
@@ -476,6 +496,32 @@ const POKEMON_FORMS = {
   'Gallade':    ['Gallade','Gallade-Mega'],
   'Audino':     ['Audino','Audino-Mega'],
   'Diancie':    ['Diancie','Diancie-Mega'],
+  // Gigantamax (Gen 8)
+  'Butterfree':  ['Butterfree','Butterfree-Gmax'],
+  'Pikachu':     ['Pikachu','Pikachu-Gmax'],
+  'Machamp':     ['Machamp','Machamp-Gmax'],
+  'Kingler':     ['Kingler','Kingler-Gmax'],
+  'Lapras':      ['Lapras','Lapras-Gmax'],
+  'Eevee':       ['Eevee','Eevee-Gmax'],
+  'Snorlax':     ['Snorlax','Snorlax-Gmax'],
+  'Garbodor':    ['Garbodor','Garbodor-Gmax'],
+  'Melmetal':    ['Melmetal','Melmetal-Gmax'],
+  'Rillaboom':   ['Rillaboom','Rillaboom-Gmax'],
+  'Cinderace':   ['Cinderace','Cinderace-Gmax'],
+  'Inteleon':    ['Inteleon','Inteleon-Gmax'],
+  'Corviknight': ['Corviknight','Corviknight-Gmax'],
+  'Orbeetle':    ['Orbeetle','Orbeetle-Gmax'],
+  'Drednaw':     ['Drednaw','Drednaw-Gmax'],
+  'Coalossal':   ['Coalossal','Coalossal-Gmax'],
+  'Flapple':     ['Flapple','Flapple-Gmax'],
+  'Appletun':    ['Appletun','Appletun-Gmax'],
+  'Sandaconda':  ['Sandaconda','Sandaconda-Gmax'],
+  'Centiskorch': ['Centiskorch','Centiskorch-Gmax'],
+  'Hatterene':   ['Hatterene','Hatterene-Gmax'],
+  'Grimmsnarl':  ['Grimmsnarl','Grimmsnarl-Gmax'],
+  'Alcremie':    ['Alcremie','Alcremie-Gmax'],
+  'Copperajah':  ['Copperajah','Copperajah-Gmax'],
+  'Duraludon':   ['Duraludon','Duraludon-Gmax'],
 };
 
 // Pokémon com forma feminina funcional (stats/habilidades distintas) — nunca via form arrows
@@ -555,6 +601,8 @@ const FORM_API_NAMES = {
   'Necrozma-Dawn-Wings': 'Necrozma-Dawn',
   'Palafin':             'Palafin-Zero',
   'Zygarde':             'Zygarde-50',
+  'Toxtricity-Gmax':     'Toxtricity-Amped-Gmax',
+  'Urshifu-Gmax':        'Urshifu-Single-Strike-Gmax',
 };
 
 // Retorna o nome de API para o sprite padrão (macho/forma base)
