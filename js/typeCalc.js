@@ -21,14 +21,18 @@ const TypeCalc = (() => {
   let _teraProfile = null;
   let _defTypes    = null;
   let _tera        = null;
+  let _lastSpriteData = null;
+  let _lastSpriteName = null;
 
   // ── Sprite state helpers ──────────────────────────────────────
-  function showSprite(id, name) {
+  function showSprite(data, name) {
+    _lastSpriteData = data;
+    _lastSpriteName = name;
     const ph  = document.getElementById('tc-sprite-placeholder');
     const img = document.getElementById('tc-sprite-img');
     ph.classList.add('hidden');
     ph.classList.remove('missingno');
-    img.src = PokeAPI.spriteUrl(id, true);
+    img.src = PokeAPI.spriteForGen(data, App.getGen());
     img.alt = name;
     img.classList.remove('hidden');
   }
@@ -147,9 +151,9 @@ const TypeCalc = (() => {
 
     const resolved = spriteApiName(name);
     PokeAPI.getPokemon(resolved)
-      .then(data => showSprite(data.id, name))
+      .then(data => showSprite(data, name))
       .catch(() => resolved !== name
-        ? PokeAPI.getPokemon(name).then(data => showSprite(data.id, name)).catch(showPlaceholder)
+        ? PokeAPI.getPokemon(name).then(data => showSprite(data, name)).catch(showPlaceholder)
         : showPlaceholder());
   }
 
@@ -354,6 +358,7 @@ const TypeCalc = (() => {
     const useTera = document.getElementById('tc-tera-toggle').checked && !!_teraProfile;
     renderDefensive(useTera);
     renderOffensive(useTera);
+    if (_lastSpriteData) showSprite(_lastSpriteData, _lastSpriteName);
   }
 
   return { init, rerender };

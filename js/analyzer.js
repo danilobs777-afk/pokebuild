@@ -155,11 +155,11 @@ const Analyzer = (() => {
     });
   }
 
-  function showSlotSprite(si, id, name) {
+  function showSlotSprite(si, data, name) {
     const wrap = document.getElementById(`az-sprite-${si}`);
     wrap.querySelector('.az-sprite-ph').classList.add('hidden');
     const img = wrap.querySelector('.az-sprite-img');
-    img.src = PokeAPI.spriteUrl(id);
+    img.src = PokeAPI.spriteForGen(data, App.getGen());
     img.alt = name;
     img.classList.remove('hidden');
   }
@@ -316,9 +316,9 @@ const Analyzer = (() => {
     refreshAzFormSwitcher(si, name);
     const _res = spriteApiName(name);
     PokeAPI.getPokemon(_res)
-      .then(data => showSlotSprite(si, data.id, name))
+      .then(data => showSlotSprite(si, data, name))
       .catch(() => _res !== name
-        ? PokeAPI.getPokemon(name).then(data => showSlotSprite(si, data.id, name)).catch(() => showSlotPlaceholder(si))
+        ? PokeAPI.getPokemon(name).then(data => showSlotSprite(si, data, name)).catch(() => showSlotPlaceholder(si))
         : showSlotPlaceholder(si));
     updateActionButtons();
   }
@@ -404,9 +404,9 @@ const Analyzer = (() => {
       if (name) {
         const _resI = spriteApiName(name);
         PokeAPI.getPokemon(_resI)
-          .then(data => showSlotSprite(i, data.id, name))
+          .then(data => showSlotSprite(i, data, name))
           .catch(() => _resI !== name
-            ? PokeAPI.getPokemon(name).then(data => showSlotSprite(i, data.id, name)).catch(() => showSlotPlaceholder(i))
+            ? PokeAPI.getPokemon(name).then(data => showSlotSprite(i, data, name)).catch(() => showSlotPlaceholder(i))
             : showSlotPlaceholder(i));
       }
     });
@@ -1063,9 +1063,16 @@ const Analyzer = (() => {
   function rerender() {
     const resultsEl = document.getElementById('az-results');
     if (!resultsEl || resultsEl.classList.contains('hidden')) return;
-    // Re-executa analyze sem alert de validação
     const hasAny = slots.some(s => s.type1 || s.type2 || s.name);
-    if (hasAny) analyze();
+    if (!hasAny) return;
+    analyze();
+    slots.forEach((slot, i) => {
+      if (!slot.name) return;
+      const _res = spriteApiName(slot.name);
+      PokeAPI.getPokemon(_res)
+        .then(data => showSlotSprite(i, data, slot.name))
+        .catch(() => {});
+    });
   }
 
   return { init, effectiveTera, rerender };

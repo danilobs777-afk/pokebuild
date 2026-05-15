@@ -63,6 +63,29 @@ const PokeAPI = (() => {
     return `${SPRITE_BASE}${shiny ? '/shiny' : ''}/${id}.png`;
   }
 
+  /**
+   * Retorna a URL do sprite adequada para a geração ativa da gen-bar.
+   * activeGen: 'gen1' | 'gen2to5' | 'gen6plus'
+   * Fallback automático para data.sprites.front_default se o sprite
+   * retro não existir (Pokémon introduzido após aquela geração).
+   */
+  function spriteForGen(data, activeGen) {
+    const v = data?.sprites?.versions;
+    const fallback = data?.sprites?.front_default || spriteUrl(data.id);
+    if (activeGen === 'gen1') {
+      return v?.['generation-i']?.['red-blue']?.front_default || fallback;
+    }
+    if (activeGen === 'gen2to5') {
+      return v?.['generation-v']?.['black-white']?.front_default
+          || v?.['generation-iv']?.['diamond-pearl']?.front_default
+          || v?.['generation-iii']?.['ruby-sapphire']?.front_default
+          || v?.['generation-ii']?.['gold']?.front_default
+          || fallback;
+    }
+    // gen6plus: official artwork
+    return `${SPRITE_BASE}/other/official-artwork/${data.id}.png`;
+  }
+
   async function getPokemon(name) {
     const key = '/pokemon/' + apiName(name);
     return get(key);
@@ -291,5 +314,5 @@ const PokeAPI = (() => {
            loadAbilityList, ensureAbilityList,
            getNature, validatePokemonForVersion,
            getPokemonAbilities, getPokemonStats,
-           spriteUrl, apiName };
+           spriteUrl, spriteForGen, apiName };
 })();
