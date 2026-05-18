@@ -230,14 +230,9 @@ const Analyzer = (() => {
 
         if (!matches.length) { suggestEl.classList.add('hidden'); return; }
 
-        suggestEl.innerHTML = matches.map(([name, types]) => {
-          const pills = types.filter(Boolean)
-            .map(t => `<span class="tpill t-${t}">${t}</span>`).join('');
-          return `<li data-name="${name}" class="ac-item-rich">
-            <span>${name}</span>
-            <span class="ac-types">${pills}</span>
-          </li>`;
-        }).join('');
+        suggestEl.innerHTML = matches
+          .map(([name, types]) => PokeBuildUI.renderPokemonSuggestion(name, types))
+          .join('');
         suggestEl.classList.remove('hidden');
       }, 120);
     });
@@ -282,16 +277,12 @@ const Analyzer = (() => {
             if (currentQ.length < 2) { moveSug.classList.add('hidden'); return; }
             const matches = list.filter(n => n.toLowerCase().startsWith(currentQ)).slice(0, 8);
             if (!matches.length) { moveSug.classList.add('hidden'); return; }
-            moveSug.innerHTML = matches.map(n => `<li data-name="${n}">${n}</li>`).join('');
+            moveSug.innerHTML = PokeBuildUI.renderMoveSuggestions(matches);
             moveSug.classList.remove('hidden');
             PokeAPI.getMovesInfo(matches)
               .then(typesMap => {
                 if (moveSug.classList.contains('hidden')) return;
-                moveSug.innerHTML = matches.map(n => {
-                  const info = typesMap[n];
-                  const badge = info ? ` <span class="tc t-${info.type} tc-dim">${info.type}</span>` : '';
-                  return `<li data-name="${n}">${n}${badge}</li>`;
-                }).join('');
+                moveSug.innerHTML = PokeBuildUI.renderMoveSuggestions(matches, typesMap, { showCategory: true });
               })
               .catch(() => {});
           })
@@ -386,32 +377,7 @@ const Analyzer = (() => {
   }
 
   function parseSmogon(text) {
-    const normalizeType = raw => TYPES.find(t => t.toLowerCase() === String(raw || '').trim().toLowerCase()) || '';
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    return text.trim().split(/\n[ \t]*\n/).filter(b => b.trim()).slice(0, SLOTS).map(block => {
-      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
-      if (!lines.length) return null;
-
-      // Cabeçalho: "Espécie @ Item" ou "Apelido (Espécie) @ Item"
-      const header = parseSmogonHeader(lines[0]);
-      const rawName = header.species;
-      const item = header.item;
-
-      let ability = '', tera = '', nature = '', evs = '', ivs = '';
-      const moves = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const l = lines[i];
-        if      (l.startsWith('Ability:'))   ability = l.slice(8).trim();
-        else if (l.startsWith('Tera Type:')) tera    = normalizeType(l.slice(10));
-        else if (l.startsWith('EVs:'))       evs     = l.slice(4).trim();
-        else if (l.startsWith('IVs:'))       ivs     = l.slice(4).trim();
-        else if (l.endsWith('Nature'))       nature  = l.split(' ')[0];
-        else if (/^(?:-|•)\s+/.test(l) && moves.length < 4) moves.push(l.replace(/^(?:-|•)\s+/, '').trim());
-      }
-
-      return { species: rawName, item, ability, tera, nature, evs, ivs, moves };
-    }).filter(Boolean);
+    return parseSmogonTeam(text, { maxSlots: SLOTS });
   }
 
   function applyParsedToSlots(parsed) {

@@ -18,11 +18,11 @@ Essa ordem importa. Os modulos de tela assumem que dados locais, regras de gerac
 
 ## Donos de responsabilidade
 
-`data.js` guarda tabelas e helpers de dominio que nao dependem do DOM: tipos, type chart, naturezas, itens, formatos, parsing/export Smogon e dados locais de Pokemon.
+`data.js` guarda tabelas e helpers de dominio que nao dependem do DOM: tipos, type chart, naturezas, itens, formatos, parsing/export Smogon e dados locais de Pokemon. `parseSmogonTeam()` e o parser unico de importacao para Analyzer e Builder; ajuste ele antes de criar regras paralelas em telas.
 
-`generation.js` transforma dados brutos em decisoes de produto. Ele responde quais tipos, jogos, version-groups e campos existem para a geracao ativa.
+`generation.js` transforma dados brutos em decisoes de produto. Ele responde quais tipos, jogos, version-groups, campos e recursos competitivos existem para a geracao ativa. Travas do Damage Simulator por geracao vivem em `damageFeatureAllowed()`.
 
-`ui.js` centraliza padroes de interface compartilhados: autocomplete com teclado, fechamento externo, escape HTML, toast e confirm modal.
+`ui.js` centraliza padroes de interface compartilhados: autocomplete com teclado, fechamento externo, escape HTML, toast, confirm modal e templates ricos de sugestao. Use `renderPokemonSuggestion()` e `renderMoveSuggestions()` para manter badges e escape HTML consistentes.
 
 `api.js` encapsula a PokeAPI e caches em memoria. Modulos de tela nao devem montar URLs da PokeAPI diretamente quando ja existe helper ali.
 
@@ -55,6 +55,7 @@ Invariantes:
 - Builder so deve mostrar jogos coerentes com a gen-bar.
 - Campos de item, ability, nature e Tera devem seguir `GenerationRules.capabilitiesForGame()`.
 - Legalidade de golpes no Builder deve usar `GenerationRules.moveVersionGroups()`.
+- Controles avancados do Damage Simulator devem consultar `GenerationRules.damageFeatureAllowed()` em vez de duplicar regras por geracao.
 
 ## Autocomplete
 
@@ -68,6 +69,8 @@ Isso garante:
 - fechamento no blur;
 - fechamento ao clicar fora;
 - descarte de referencias antigas quando cards sao re-renderizados.
+
+Quando a sugestao mostrar Pokemon ou golpes com badges, use os renderizadores de `PokeBuildUI` em vez de montar HTML local. Eles padronizam `data-name`, classes visuais e sanitizacao.
 
 ## Seguranca de DOM
 

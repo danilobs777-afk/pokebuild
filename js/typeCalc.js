@@ -85,14 +85,9 @@ const TypeCalc = (() => {
 
         if (!matches.length) { suggestEl.classList.add('hidden'); return; }
 
-        suggestEl.innerHTML = matches.slice(0, 15).map(([name, types]) => {
-          const pills = types.filter(Boolean)
-            .map(t => `<span class="tpill t-${t}">${t}</span>`).join('');
-          return `<li data-name="${name}" class="ac-item-rich">
-            <span>${name}</span>
-            <span class="ac-types">${pills}</span>
-          </li>`;
-        }).join('');
+        suggestEl.innerHTML = matches.slice(0, 15)
+          .map(([name, types]) => PokeBuildUI.renderPokemonSuggestion(name, types))
+          .join('');
         suggestEl.classList.remove('hidden');
       }, 120);
     });

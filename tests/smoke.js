@@ -72,6 +72,18 @@ function click(selector) {
   return el;
 }
 
+function confirmIfNeeded() {
+  if (!document.querySelector('#confirm-modal')?.classList.contains('hidden')) {
+    click('#confirm-ok-btn');
+  }
+}
+
+async function openView(viewId, label) {
+  click(`.nav-btn[data-view="${viewId}"]`);
+  confirmIfNeeded();
+  await waitFor(() => document.querySelector(`#view-${viewId}.active`), label);
+}
+
 function setValue(selector, value) {
   const el = document.querySelector(selector);
   assert(el, `Campo nao encontrado: ${selector}`);
@@ -98,6 +110,14 @@ async function loadMove(name) {
   }, `golpe ${name} carregado`, 15000);
 }
 
+async function cleanupSmokeTeams() {
+  if (typeof TeamStorage === 'undefined') return;
+  const teams = await TeamStorage.getTeams();
+  await Promise.all((teams || [])
+    .filter(team => String(team.name || '').startsWith('__Smoke Pokebuild'))
+    .map(team => TeamStorage.deleteTeam(team.id)));
+}
+
 async function step(name, fn) {
   report(name, 'run');
   try {
@@ -113,6 +133,7 @@ async function step(name, fn) {
 
 async function runSmoke() {
   await waitFor(() => document.querySelector('#view-type-calc.active') && document.querySelector('#dmg-atk-name'), 'app inicializar');
+  await cleanupSmokeTeams();
 
   await step('Gen-bar filtra tipos da Gen 1', async () => {
     click('.gen-btn[data-gen="gen1"]');
@@ -122,8 +143,7 @@ async function runSmoke() {
 
   await step('Builder filtra formatos e mostra preview de importacao', async () => {
     click('.gen-btn[data-gen="gen6plus"]');
-    click('.nav-btn[data-view="builder"]');
-    await waitFor(() => document.querySelector('#view-builder.active'), 'Builder ativo');
+    await openView('builder', 'Builder ativo');
     const formats = [...document.querySelectorAll('#bld-format option')].map(o => o.value);
     assert(formats.includes('scarlet-violet'), 'SV deveria aparecer na Gen 6+');
     assert(!formats.includes('red-blue'), 'RBY nao deveria aparecer na Gen 6+');
@@ -141,8 +161,7 @@ async function runSmoke() {
   });
 
   await step('Damage Simulator bloqueia calculo sem golpe carregado', async () => {
-    click('.nav-btn[data-view="damage-sim"]');
-    await waitFor(() => document.querySelector('#view-damage-sim.active'), 'Damage ativo');
+    await openView('damage-sim', 'Damage ativo');
     click('#dmg-calc-btn');
     const validation = document.querySelector('#dmg-validation')?.textContent || '';
     assert(validation.includes('Selecione um golpe'), 'Validacao de golpe obrigatorio nao apareceu');
@@ -202,9 +221,66 @@ async function runSmoke() {
     await waitFor(() => (document.querySelector('#dmg-engine-detail')?.textContent || '').includes('Recovery'), 'recovery Smogon', 15000);
   });
 
+  await step('Analyzer importa Smogon e envia ao Builder', async () => {
+    await openView('analyzer', 'Analyzer ativo');
+    click('#az-import-btn');
+    setValue('#az-smogon-text', [
+      'Pikachu @ Light Ball',
+      'Ability: Static',
+      'Tera Type: Electric',
+      'EVs: 252 SpA / 4 HP / 252 Spe',
+      'Timid Nature',
+      '- Thunderbolt',
+      '- Volt Switch'
+    ].join('\n'));
+    click('#az-smogon-import');
+    await waitFor(() => !document.querySelector('#az-to-builder-btn')?.disabled, 'botao para Builder liberado');
+    click('#az-to-builder-btn');
+    await waitFor(() => document.querySelector('#view-builder.active'), 'Builder recebeu Analyzer');
+    assert(document.querySelector('.bld-pkmn-input[data-slot="0"]')?.value === 'Pikachu', 'Pokemon nao chegou ao Builder');
+    assert(document.querySelector('.bld-move[data-slot="0"][data-move="0"]')?.value === 'Thunderbolt', 'Move nao chegou ao Builder');
+  });
+
+  await step('My Teams abre detalhe e exporta time salvo', async () => {
+    const teamName = `__Smoke Pokebuild ${Date.now()}`;
+    const id = await TeamStorage.saveTeam({
+      name: teamName,
+      format: 'scarlet-violet',
+      isChampions: false,
+      members: [{
+        name: 'Pikachu',
+        item: 'Light Ball',
+        ability: 'Static',
+        nature: 'Timid',
+        teraType: 'Electric',
+        moves: ['Thunderbolt', 'Volt Switch', '', ''],
+        evs: { hp: 4, atk: 0, def: 0, spa: 252, spd: 0, spe: 252 },
+        ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+        level: 50,
+        shiny: false,
+        gender: 'male'
+      }]
+    });
+    try {
+      await openView('my-teams', 'My Teams ativo');
+      await waitFor(() => document.querySelector(`.team-card-saved[data-id="${id}"]`), 'card do time smoke');
+      click(`.team-card-saved[data-id="${id}"]`);
+      await waitFor(() => !document.querySelector('#mt-detail')?.classList.contains('hidden'), 'detalhe aberto');
+      assert((document.querySelector('#mt-detail-name')?.textContent || '').includes(teamName), 'Detalhe nao mostra o time criado');
+      click('#mt-detail-export-btn');
+      await waitFor(() => !document.querySelector('#export-modal')?.classList.contains('hidden'), 'modal de export');
+      const exportText = document.querySelector('#export-text')?.value || '';
+      assert(exportText.includes('Pikachu @ Light Ball'), 'Export Smogon nao contem Pikachu');
+      click('#modal-copy-btn');
+      await waitFor(() => (document.querySelector('#modal-copy-btn')?.textContent || '').includes('Copiado'), 'copiar export');
+      click('#modal-close-btn');
+    } finally {
+      await TeamStorage.deleteTeam(id);
+    }
+  });
+
   await step('My Teams carrega galeria e resumo', async () => {
-    click('.nav-btn[data-view="my-teams"]');
-    await waitFor(() => document.querySelector('#view-my-teams.active'), 'My Teams ativo');
+    await openView('my-teams', 'My Teams ativo');
     assert(document.querySelector('#mt-gallery'), 'Galeria nao encontrada');
     assert(document.querySelector('#mt-summary'), 'Resumo nao encontrado');
   });
@@ -219,6 +295,8 @@ async function runSmoke() {
     document.documentElement.style.width = '';
     document.body.style.width = '';
   });
+
+  await cleanupSmokeTeams();
 
   window.__POKEBUILD_SMOKE_DONE__ = { ok: true, results };
   document.body.dataset.smokeDone = 'ok';

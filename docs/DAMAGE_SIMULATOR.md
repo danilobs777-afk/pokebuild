@@ -13,7 +13,7 @@ O Damage Simulator usa um bundle local do `@smogon/calc` para reproduzir a formu
 - estado avancado do campo: Magic Room, Wonder Room, auras, Aura Break, habilidades Ruin, Power Trick, Foresight, Flower Gift, Battery, Power Spot e Steely Spirit;
 - Max Move, Z-Move, primeiro uso Stellar, Dynamax, habilidade ativa, boosted stat e contadores relevantes;
 - hazards e efeitos residuais considerados na leitura de KO do motor: Stealth Rock, Spikes, G-Max Steelsurge, Vine Lash, Wildfire, Cannonade, Volcalith, Leech Seed e Salt Cure;
-- travas por geracao para esconder combinacoes impossiveis, como Z-Move fora da Gen 7, Dynamax fora da Gen 8 e Tera/Stellar fora da Gen 9;
+- travas por geracao para esconder combinacoes impossiveis, como Z-Move fora da Gen 7, Dynamax fora da Gen 8 e Tera/Stellar fora da Gen 9, definidas em `GenerationRules.damageFeatureAllowed()`;
 - presets de campo para limpar rapidamente, preparar Singles, preparar hazards ou preparar um cenario VGC;
 - Tera Type ofensivo e defensivo;
 - rolls de dano, badges de 1HKO/2HKO/3HKO/Safe, leitura contextual do Smogon Calc, barra pos-turno e notas de velocidade;
@@ -42,7 +42,7 @@ Regras do fallback:
 - `vendor/smogon-calc/data/production.min.js`: dados competitivos do Smogon Calc.
 - `vendor/smogon-calc/production.min.js`: motor de calculo.
 - `js/smogonCalcAdapter.js`: traduz o estado do formulario para `Pokemon`, `Move`, `Field` e normaliza a resposta para a UI.
-- `js/dmgCalc.js`: controla o formulario, autocompletes, fallback interno e renderizacao do resultado.
+- `js/dmgCalc.js`: controla o formulario, autocompletes, fallback interno e renderizacao do resultado. Ele consulta `GenerationRules.damageFeatureAllowed()` para habilitar ou ignorar controles por geracao.
 
 ## Invariantes importantes
 
@@ -58,4 +58,4 @@ Regras do fallback:
 
 ## Ao adicionar regras novas
 
-Prefira alimentar o `SmogonDamage` com mais estado do formulario em vez de duplicar regra no fallback. So amplie o fallback quando for uma protecao de UX ou quando o motor local nao suportar claramente o caso.
+Prefira alimentar o `SmogonDamage` com mais estado do formulario em vez de duplicar regra no fallback. So amplie o fallback quando for uma protecao de UX ou quando o motor local nao suportar claramente o caso. Se a regra for sobre disponibilidade historica de um recurso, coloque-a em `generation.js` para que a UI inteira conte a mesma historia.

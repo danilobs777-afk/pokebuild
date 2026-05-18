@@ -661,18 +661,7 @@ const Builder = (() => {
     if (!moveInput || !moveSug) return;
 
     function renderMoveItems(matches, typesMap) {
-      return matches.map(n => {
-        const info = typesMap[n];
-        const badge = info ? `<span class="tc t-${info.type} tc-dim">${info.type}</span>` : '';
-        const cat = info?.category ? `<span class="tc tc-dim">${categoryShort(info.category)}</span>` : '';
-        return `<li data-name="${n}">${n} ${badge} ${cat}</li>`;
-      }).join('');
-    }
-
-    function categoryShort(category) {
-      if (category === 'physical') return 'Physical';
-      if (category === 'special') return 'Special';
-      return 'Status';
+      return PokeBuildUI.renderMoveSuggestions(matches, typesMap, { showCategory: true });
     }
 
     /**
@@ -849,10 +838,9 @@ const Builder = (() => {
               .filter(([name]) => !FORM_VARIANTS.has(name) && name.toLowerCase().startsWith(q))
               .slice(0, 10);
             if (!matches.length) { suggestEl.classList.add('hidden'); return; }
-            suggestEl.innerHTML = matches.map(([name, types]) => {
-              const pills = types.filter(Boolean).map(t => `<span class="tpill t-${t}">${t}</span>`).join('');
-              return `<li data-name="${name}" class="ac-item-rich"><span>${name}</span><span class="ac-types">${pills}</span></li>`;
-            }).join('');
+            suggestEl.innerHTML = matches
+              .map(([name, types]) => PokeBuildUI.renderPokemonSuggestion(name, types))
+              .join('');
             suggestEl.classList.remove('hidden');
           }, 150);
         });
@@ -1161,56 +1149,7 @@ const Builder = (() => {
 
   // ── Smogon import ─────────────────────────────────────────────
   function parseSmogonForBuilder(text) {
-    const normalizeType = raw => TYPES.find(t => t.toLowerCase() === String(raw || '').trim().toLowerCase()) || '';
-
-    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const maxSlots = isChampions ? 3 : SLOTS;
-    return text.trim().split(/\n[ \t]*\n/).filter(b => b.trim()).slice(0, maxSlots).map(block => {
-      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
-      if (!lines.length) return null;
-      const header = parseSmogonHeader(lines[0]);
-      let ability = '', teraType = '', nature = 'Hardy', evsStr = '', ivsStr = '', spStr = '';
-      let shiny = false, gmax = false, gender = header.gender || 'male';
-      const moves = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const l = lines[i];
-        const moveLine = l.match(/^(?:-|•)\s*(.+)$/);
-        if (moveLine && moves.length < 4) {
-          moves.push(moveLine[1].trim());
-          continue;
-        }
-
-        const [rawKey, ...rest] = l.split(':');
-        const key = rawKey.trim().toLowerCase();
-        const value = cleanSmogonValue(rest.join(':'));
-        if      (key === 'ability')    ability  = value;
-        else if (key === 'tera type')  teraType = normalizeType(value);
-        else if (key === 'shiny')      shiny    = value.toLowerCase() === 'yes';
-        else if (key === 'gigantamax') gmax     = value.toLowerCase() === 'yes';
-        else if (key === 'gender')     gender   = value.toLowerCase().startsWith('f') ? 'female' : value.toLowerCase().startsWith('m') ? 'male' : gender;
-        else if (key === 'evs')        evsStr   = value;
-        else if (key === 'sp spread')  spStr    = value;
-        else if (key === 'ivs')        ivsStr   = value;
-        else if (key === 'nature')     nature   = value;
-        else if (/\s+nature$/i.test(l)) nature  = l.replace(/\s+nature$/i, '').trim();
-      }
-
-      return {
-        name: header.species,
-        item: header.item,
-        ability,
-        teraType,
-        shiny,
-        gmax,
-        gender,
-        level: 50,
-        nature: normalizeNature(nature),
-        evs: parseStatSpread(isChampions ? (spStr || evsStr) : evsStr, 0, isChampions ? 32 : 252),
-        ivs: parseStatSpread(ivsStr, 31, 31),
-        moves
-      };
-    }).filter(Boolean);
+    return parseSmogonTeam(text, { maxSlots: isChampions ? 3 : SLOTS, isChampions });
   }
 
   function applySmogonImport(parsed) {

@@ -33,6 +33,38 @@ const PokeBuildUI = (() => {
     suggestEl?.classList.add('hidden');
   }
 
+  function typePills(types = [], pillClass = 'tpill') {
+    return types
+      .filter(Boolean)
+      .map(type => `<span class="${pillClass} t-${escapeHtml(type)}">${escapeHtml(type)}</span>`)
+      .join('');
+  }
+
+  function renderPokemonSuggestion(name, types = []) {
+    return `<li data-name="${escapeHtml(name)}" class="ac-item-rich"><span>${escapeHtml(name)}</span><span class="ac-types">${typePills(types)}</span></li>`;
+  }
+
+  function moveCategoryLabel(category) {
+    if (category === 'physical') return 'Physical';
+    if (category === 'special') return 'Special';
+    if (category === 'status') return 'Status';
+    return '';
+  }
+
+  function renderMoveSuggestion(name, info = {}, opts = {}) {
+    const type = info?.type;
+    const category = moveCategoryLabel(info?.category);
+    const typeBadge = type ? `<span class="tc t-${escapeHtml(type)} tc-dim">${escapeHtml(type)}</span>` : '';
+    const categoryBadge = opts.showCategory && category ? `<span class="tc tc-dim">${category}</span>` : '';
+    const meta = [typeBadge, categoryBadge].filter(Boolean).join(' ');
+    const richClass = opts.rich ? ' class="ac-item-rich"' : '';
+    return `<li data-name="${escapeHtml(name)}"${richClass}><span>${escapeHtml(name)}</span>${meta ? ` <span class="ac-types">${meta}</span>` : ''}</li>`;
+  }
+
+  function renderMoveSuggestions(names = [], infoMap = {}, opts = {}) {
+    return names.map(name => renderMoveSuggestion(name, infoMap[name], opts)).join('');
+  }
+
   function bindAutocompleteKeys(inputEl, suggestEl, onPick) {
     if (!inputEl || !suggestEl || inputEl.dataset.acKeysBound === 'true') return;
     inputEl.dataset.acKeysBound = 'true';
@@ -156,6 +188,10 @@ const PokeBuildUI = (() => {
     enableAutocompleteAutoClose,
     escapeHtml,
     hideSuggestions,
+    renderMoveSuggestion,
+    renderMoveSuggestions,
+    renderPokemonSuggestion,
+    typePills,
     showToast,
   };
 })();

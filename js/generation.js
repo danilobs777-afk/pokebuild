@@ -44,6 +44,39 @@ const GenerationRules = (() => {
     },
   });
 
+  const DAMAGE_FEATURE_RULES = Object.freeze({
+    item: gen => gen >= 2,
+    ability: gen => gen >= 3,
+    nature: gen => gen >= 3,
+    terrain: gen => gen >= 6,
+    tera: gen => gen >= 9,
+    zMove: gen => gen === 7,
+    maxMove: gen => gen === 8,
+    dynamax: gen => gen === 8,
+    stellar: gen => gen >= 9,
+    aura: gen => gen >= 6,
+    ruin: gen => gen >= 9,
+    battery: gen => gen >= 7,
+    powerSpot: gen => gen >= 8,
+    steelySpirit: gen => gen >= 8,
+    flowerGift: gen => gen >= 4,
+    friendGuard: gen => gen >= 5,
+    auroraVeil: gen => gen >= 7,
+    foresight: gen => gen >= 2 && gen <= 7,
+    magicRoom: gen => gen >= 5,
+    wonderRoom: gen => gen >= 5,
+    gravity: gen => gen >= 4,
+    powerTrick: gen => gen >= 4,
+    stealthRock: gen => gen >= 4,
+    spikes: gen => gen >= 2,
+    gmax: gen => gen === 8,
+    saltCure: gen => gen >= 9,
+    boostedStat: gen => gen >= 9,
+    alliesFainted: gen => gen >= 9,
+    metronomeItem: gen => gen >= 4,
+    switching: gen => gen >= 2 && gen <= 7,
+  });
+
   function activeGen() {
     return getActiveGen();
   }
@@ -115,11 +148,18 @@ const GenerationRules = (() => {
     };
   }
 
+  function damageFeatureAllowed(feature, gen = 9) {
+    const numericGen = Math.min(9, Math.max(1, Number(gen) || 9));
+    const rule = DAMAGE_FEATURE_RULES[feature];
+    return rule ? rule(numericGen) : true;
+  }
+
   return {
     activeGen,
     activeTypes,
     capabilitiesForGame,
     capabilitiesForGen,
+    damageFeatureAllowed,
     defaultGameVersion,
     gameVersions,
     genGroupForGame,

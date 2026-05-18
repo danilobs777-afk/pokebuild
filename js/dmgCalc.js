@@ -474,10 +474,9 @@ const DmgCalc = (() => {
           .filter(([name]) => name.toLowerCase().startsWith(q))
           .slice(0, 10);
         if (!matches.length) { suggestEl.classList.add('hidden'); return; }
-        suggestEl.innerHTML = matches.map(([name, types]) => {
-          const pills = types.filter(Boolean).map(t => `<span class="tpill t-${t}">${t}</span>`).join('');
-          return `<li data-name="${name}" class="ac-item-rich"><span>${name}</span><span class="ac-types">${pills}</span></li>`;
-        }).join('');
+        suggestEl.innerHTML = matches
+          .map(([name, types]) => PokeBuildUI.renderPokemonSuggestion(name, types))
+          .join('');
         suggestEl.classList.remove('hidden');
       }, 150);
     });
@@ -739,39 +738,7 @@ const DmgCalc = (() => {
   }
 
   function featureAllowed(feature, gen = selectedCalcGen()) {
-    const rules = {
-      item: gen >= 2,
-      ability: gen >= 3,
-      nature: gen >= 3,
-      terrain: gen >= 6,
-      tera: gen >= 9,
-      zMove: gen === 7,
-      maxMove: gen === 8,
-      dynamax: gen === 8,
-      stellar: gen >= 9,
-      aura: gen >= 6,
-      ruin: gen >= 9,
-      battery: gen >= 7,
-      powerSpot: gen >= 8,
-      steelySpirit: gen >= 8,
-      flowerGift: gen >= 4,
-      friendGuard: gen >= 5,
-      auroraVeil: gen >= 7,
-      foresight: gen >= 2 && gen <= 7,
-      magicRoom: gen >= 5,
-      wonderRoom: gen >= 5,
-      gravity: gen >= 4,
-      powerTrick: gen >= 4,
-      stealthRock: gen >= 4,
-      spikes: gen >= 2,
-      gmax: gen === 8,
-      saltCure: gen >= 9,
-      boostedStat: gen >= 9,
-      alliesFainted: gen >= 9,
-      metronomeItem: gen >= 4,
-      switching: gen >= 2 && gen <= 7,
-    };
-    return rules[feature] ?? true;
+    return GenerationRules?.damageFeatureAllowed?.(feature, gen) ?? true;
   }
 
   function syncCalcGenSelect() {
@@ -1117,15 +1084,11 @@ const DmgCalc = (() => {
           if (currentQ.length < 2) { suggestEl.classList.add('hidden'); return; }
           const matches = list.filter(n => n.toLowerCase().includes(currentQ)).slice(0, 12);
           if (!matches.length) { suggestEl.classList.add('hidden'); return; }
-          suggestEl.innerHTML = matches.map(n => `<li data-name="${n}" class="ac-item-rich"><span>${n}</span></li>`).join('');
+          suggestEl.innerHTML = PokeBuildUI.renderMoveSuggestions(matches, {}, { rich: true });
           suggestEl.classList.remove('hidden');
           PokeAPI.getMovesInfo(matches).then(typesMap => {
             if (suggestEl.classList.contains('hidden')) return;
-            suggestEl.innerHTML = matches.map(n => {
-              const info = typesMap[n];
-              const pill = info ? `<span class="tpill t-${info.type}" style="font-size:10px;padding:1px 5px">${info.type}</span>` : '';
-              return `<li data-name="${n}" class="ac-item-rich"><span>${n}</span>${pill}</li>`;
-            }).join('');
+            suggestEl.innerHTML = PokeBuildUI.renderMoveSuggestions(matches, typesMap, { rich: true, showCategory: true });
           }).catch(() => {});
         }).catch(() => { suggestEl.classList.add('hidden'); });
       }, 200);

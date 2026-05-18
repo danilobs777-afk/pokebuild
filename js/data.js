@@ -739,6 +739,91 @@ function normalizeNature(raw) {
   return Object.keys(NATURES).find(n => n.toLowerCase() === key.toLowerCase()) || 'Hardy';
 }
 
+function normalizeSmogonType(raw) {
+  return TYPES.find(t => t.toLowerCase() === String(raw || '').trim().toLowerCase()) || '';
+}
+
+/**
+ * Parser unico para texto no formato Smogon/Showdown.
+ * Analyzer e Builder consomem fatias diferentes do mesmo objeto, entao o parser
+ * preserva campos crus e tambem devolve spreads normalizados quando necessario.
+ */
+function parseSmogonTeam(text, opts = {}) {
+  const maxSlots = opts.maxSlots ?? Infinity;
+  const isChampions = !!opts.isChampions;
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim()
+    .split(/\n[ \t]*\n/)
+    .filter(block => block.trim())
+    .slice(0, maxSlots)
+    .map(block => {
+      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return null;
+
+      const header = parseSmogonHeader(lines[0]);
+      let ability = '';
+      let teraType = '';
+      let nature = 'Hardy';
+      let evsText = '';
+      let ivsText = '';
+      let spText = '';
+      let level = 50;
+      let shiny = false;
+      let gmax = false;
+      let gender = header.gender || 'male';
+      const moves = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        const moveLine = line.match(/^(?:-|\u2022)\s*(.+)$/);
+        if (moveLine && moves.length < 4) {
+          moves.push(moveLine[1].trim());
+          continue;
+        }
+
+        const [rawKey, ...rest] = line.split(':');
+        const key = rawKey.trim().toLowerCase();
+        const value = cleanSmogonValue(rest.join(':'));
+        if (key === 'ability') ability = value;
+        else if (key === 'tera type') teraType = normalizeSmogonType(value);
+        else if (key === 'shiny') shiny = value.toLowerCase() === 'yes';
+        else if (key === 'gigantamax') gmax = value.toLowerCase() === 'yes';
+        else if (key === 'gender') gender = value.toLowerCase().startsWith('f') ? 'female' : value.toLowerCase().startsWith('m') ? 'male' : gender;
+        else if (key === 'level') level = Math.min(100, Math.max(1, parseInt(value, 10) || 50));
+        else if (key === 'evs') evsText = value;
+        else if (key === 'sp spread') spText = value;
+        else if (key === 'ivs') ivsText = value;
+        else if (key === 'nature') nature = value;
+        else if (/\s+nature$/i.test(line)) nature = line.replace(/\s+nature$/i, '').trim();
+      }
+
+      return {
+        species: header.species,
+        name: header.species,
+        nickname: header.nickname,
+        item: header.item,
+        ability,
+        tera: teraType,
+        teraType,
+        shiny,
+        gmax,
+        gender,
+        level,
+        nature: normalizeNature(nature),
+        rawNature: nature,
+        evsText,
+        ivsText,
+        spText,
+        evs: parseStatSpread(isChampions ? (spText || evsText) : evsText, 0, isChampions ? 32 : 252),
+        ivs: parseStatSpread(ivsText, 31, 31),
+        moves,
+      };
+    })
+    .filter(Boolean);
+}
+
 function smogonHeaderName(member) {
   const rawName = member.name || '';
   const isGmax = rawName.endsWith('-Gmax');
