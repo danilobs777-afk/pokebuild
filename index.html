@@ -503,6 +503,8 @@
 </div>
 
 <script src="js/data.js"></script>
+<script src="js/generation.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/typeCalc.js"></script>
@@ -521,13 +523,12 @@
   if ('serviceWorker' in navigator) {
     const SW_VERSION_KEY = 'pokebuild-sw-version';
     const showUpdateToast = () => {
-      if (document.getElementById('app-update-toast')) return;
-      const toast = document.createElement('div');
-      toast.id = 'app-update-toast';
-      toast.className = 'app-update-toast';
-      toast.innerHTML = '<span>Nova versao disponivel.</span><button type="button">Recarregar</button>';
-      toast.querySelector('button').addEventListener('click', () => location.reload());
-      document.body.appendChild(toast);
+      PokeBuildUI.showToast({
+        id: 'app-update-toast',
+        message: 'Nova versao disponivel.',
+        actionLabel: 'Recarregar',
+        onAction: () => location.reload(),
+      });
     };
     const shouldNotifyForSwVersion = (version, isUpdate) => {
       if (!version) return !!isUpdate;

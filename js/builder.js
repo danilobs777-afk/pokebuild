@@ -22,6 +22,7 @@
  *
  * Dependências: data.js (TYPES, NATURES, STAT_KEYS, STAT_LABELS, GAME_VERSIONS,
  *   ITEMS, TYPE_COLORS, calcStat),
+ *   generation.js (GenerationRules), ui.js (PokeBuildUI),
  *   api.js (PokeAPI — inclui ensureAbilityList), storage.js (TeamStorage), app.js (App).
  */
 
@@ -35,7 +36,7 @@ const Builder = (() => {
   let draftTimer = null;
 
   function esc(s) {
-    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return PokeBuildUI.escapeHtml(s);
   }
 
   // ── Slot data model ───────────────────────────────────────────
@@ -97,27 +98,25 @@ const Builder = (() => {
 
   // ── Build slot HTML ───────────────────────────────────────────
   function hasTera() {
-    if (isChampions) return true;
     const fmt = document.getElementById('bld-format')?.value;
-    return GAME_VERSIONS.find(v => v.key === fmt)?.gen === 9;
+    return GenerationRules.capabilitiesForGame(fmt, isChampions).tera;
   }
 
   function builderGen() {
-    if (isChampions) return 9;
     const fmt = document.getElementById('bld-format')?.value;
-    return GAME_VERSIONS.find(v => v.key === fmt)?.gen ?? 9;
+    return GenerationRules.capabilitiesForGame(fmt, isChampions).gen;
   }
-  function hasAbility() { return builderGen() >= 3; }
-  function hasNature()  { return builderGen() >= 3; }
-  function hasItem()    { return builderGen() >= 2; }
+  function hasAbility() { return GenerationRules.capabilitiesForGame(document.getElementById('bld-format')?.value, isChampions).ability; }
+  function hasNature()  { return GenerationRules.capabilitiesForGame(document.getElementById('bld-format')?.value, isChampions).nature; }
+  function hasItem()    { return GenerationRules.capabilitiesForGame(document.getElementById('bld-format')?.value, isChampions).item; }
 
   function populateFormatSelect(preferredKey) {
     const formatSel = document.getElementById('bld-format');
     if (!formatSel) return '';
-    const gen = (typeof App !== 'undefined' && App.getGen) ? App.getGen() : getActiveGen();
-    const versions = getGameVersionsForGen(gen);
+    const gen = (typeof App !== 'undefined' && App.getGen) ? App.getGen() : GenerationRules.activeGen();
+    const versions = GenerationRules.gameVersions(gen);
     const current = preferredKey || formatSel.value;
-    const next = versions.some(v => v.key === current) ? current : getDefaultGameVersionForGen(gen);
+    const next = versions.some(v => v.key === current) ? current : GenerationRules.defaultGameVersion(gen);
     formatSel.innerHTML = versions.map(v => `<option value="${v.key}">${v.label}</option>`).join('');
     formatSel.value = next;
     return next;
@@ -360,7 +359,7 @@ const Builder = (() => {
       }
 
       if (draft.format && !isChampions) {
-        const targetGen = getGenGroupForGameVersion(draft.format);
+        const targetGen = GenerationRules.genGroupForGame(draft.format);
         if (targetGen && typeof App !== 'undefined' && App.getGen && App.getGen() !== targetGen) App.setGen(targetGen);
         populateFormatSelect(draft.format);
       }
@@ -415,10 +414,7 @@ const Builder = (() => {
   function bindBuilderGlobalListeners() {
     if (document.body.dataset.builderGlobalListeners === 'true') return;
     document.body.dataset.builderGlobalListeners = 'true';
-    document.addEventListener('click', e => {
-      if (e.target.closest('#view-builder .autocomplete-wrap')) return;
-      document.querySelectorAll('#view-builder .suggestions').forEach(el => el.classList.add('hidden'));
-    });
+    PokeBuildUI.enableAutocompleteAutoClose('#view-builder');
   }
 
   function loadSprite(i, name, keepCurrent = false) {
@@ -579,7 +575,7 @@ const Builder = (() => {
       }
     });
 
-    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, { onPick: li => li.click() });
 
   }
 
@@ -654,7 +650,7 @@ const Builder = (() => {
       markDirty();
     });
 
-    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, { onPick: li => li.click() });
 
   }
 
@@ -689,7 +685,7 @@ const Builder = (() => {
       const pkName = slots[i].name;
       if (pkName) {
         const formatKey = document.getElementById('bld-format').value;
-        const vgKeys = isChampions ? null : getMoveVersionGroupsForGameVersion(formatKey);
+        const vgKeys = isChampions ? null : GenerationRules.moveVersionGroups(formatKey);
         return PokeAPI.getLearnableMoves(pkName, vgKeys);
       }
       return PokeAPI.ensureMoveList().then(list => { MOVE_NAMES = list; return list; });
@@ -825,7 +821,7 @@ const Builder = (() => {
       }).catch(() => {});
     });
 
-    bindAutocompleteKeys(moveInput, moveSug, li => li.click());
+    PokeBuildUI.bindAutocomplete(moveInput, moveSug, { onPick: li => li.click() });
 
   }
 
@@ -882,7 +878,7 @@ const Builder = (() => {
           }
           markDirty();
         });
-        bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
+        PokeBuildUI.bindAutocomplete(inputEl, suggestEl, { onPick: li => li.click() });
       }
 
       setupAbilityAutocomplete(i);
@@ -1051,7 +1047,7 @@ const Builder = (() => {
 
       // Validação via PokéAPI (habilidade e golpes)
       const moveNames = slot.moves.filter(m => m.trim());
-      const vgKey = isChampions ? null : getMoveVersionGroupsForGameVersion(formatKey);
+      const vgKey = isChampions ? null : GenerationRules.moveVersionGroups(formatKey);
       const apiErrors = await PokeAPI.validatePokemonForVersion(
         effectiveName(slot), moveNames, slot.ability, vgKey, versionGroup?.label
       );
@@ -1325,7 +1321,7 @@ const Builder = (() => {
 
     const formatSel = document.getElementById('bld-format');
     if (formatSel && teamFormat && teamFormat !== 'champions') {
-      const targetGen = getGenGroupForGameVersion(teamFormat);
+      const targetGen = GenerationRules.genGroupForGame(teamFormat);
       if (targetGen && typeof App !== 'undefined' && App.getGen && App.getGen() !== targetGen) {
         App.setGen(targetGen);
       }

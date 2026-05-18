@@ -105,16 +105,8 @@ const TypeCalc = (() => {
       e.preventDefault();
       selectPokemon(li.dataset.name);
     });
-    bindAutocompleteKeys(inputEl, suggestEl, li => selectPokemon(li.dataset.name));
-
-    // Blur: apenas fecha sugestões, sem limpar o campo
-    inputEl.addEventListener('blur', () => {
-      setTimeout(() => suggestEl.classList.add('hidden'), 150);
-    });
-
-    document.addEventListener('click', e => {
-      if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-        suggestEl.classList.add('hidden');
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, {
+      onPick: li => selectPokemon(li.dataset.name),
     });
 
     document.getElementById('tc-form-switcher').addEventListener('click', e => {

@@ -7,16 +7,16 @@
  * (exportação e confirmação) e inicialização de todos os módulos.
  *
  * Ordem de inicialização (deve respeitar a ordem de <script> no HTML):
- *   data.js → api.js → storage.js → typeCalc.js → analyzer.js
- *   → builder.js → teams.js → dmgCalc.js → app.js
+ *   data.js → generation.js → ui.js → api.js → storage.js → typeCalc.js
+ *   → analyzer.js → builder.js → teams.js → dmgCalc.js → app.js
  *
  * Dependências: todos os módulos acima (TypeCalc, Analyzer, Builder,
- *   TeamsView, DmgCalc, PokeAPI).
+ *   TeamsView, DmgCalc, PokeAPI, GenerationRules, PokeBuildUI).
  */
 
 const App = (() => {
   const views = ['type-calc', 'analyzer', 'builder', 'my-teams', 'damage-sim'];
-  let pendingConfirmCallback = null;
+  let confirmController = null;
 
   /**
    * Ativa a view indicada e desativa as demais.
@@ -109,13 +109,12 @@ const App = (() => {
     exportModal.addEventListener('click', e => { if (e.target === exportModal) exportModal.classList.add('hidden'); });
 
     const confirmModal = document.getElementById('confirm-modal');
-    document.getElementById('confirm-cancel-btn').addEventListener('click', closeConfirmModal);
-    document.getElementById('confirm-ok-btn').addEventListener('click', () => {
-      const onOk = pendingConfirmCallback;
-      closeConfirmModal();
-      onOk?.();
+    confirmController = PokeBuildUI.createConfirmController({
+      modal: confirmModal,
+      messageEl: document.getElementById('confirm-msg'),
+      okBtn: document.getElementById('confirm-ok-btn'),
+      cancelBtn: document.getElementById('confirm-cancel-btn'),
     });
-    confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirmModal(); });
   }
 
   // ── Seletor de geração ────────────────────────────────────────
@@ -123,7 +122,7 @@ const App = (() => {
 
   function setGen(gen) {
     _currentGen = gen;
-    setActiveGen(gen);
+    GenerationRules.setActive(gen);
     document.querySelectorAll('.gen-btn').forEach(b => b.classList.toggle('active', b.dataset.gen === gen));
     TypeCalc.rerender();
     Analyzer.rerender();
@@ -148,15 +147,7 @@ const App = (() => {
   }
 
   function showConfirm(msg, onOk) {
-    document.getElementById('confirm-msg').textContent = msg;
-    const modal = document.getElementById('confirm-modal');
-    pendingConfirmCallback = typeof onOk === 'function' ? onOk : null;
-    modal.classList.remove('hidden');
-  }
-
-  function closeConfirmModal() {
-    pendingConfirmCallback = null;
-    document.getElementById('confirm-modal')?.classList.add('hidden');
+    confirmController?.show(msg, onOk);
   }
 
   function init() {

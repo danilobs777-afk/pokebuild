@@ -7,6 +7,7 @@
  * tipos, tabela de efetividade, naturezas, nomes de Pokemon, itens e versoes.
  * Carregado primeiro na ordem de scripts (ver index.html).
  * Todas as variaveis aqui sao globais e acessadas pelos demais modulos.
+ * Regras de produto derivadas dessas tabelas devem passar por generation.js.
  *
  * Dependencias: nenhuma (este e o primeiro script carregado).
  */
@@ -45,9 +46,13 @@ const _GEN_PATCHES = {
 };
 
 /** Retorna os tipos atacantes/defensores válidos para a geração ativa. */
-function getActiveTypes() {
-  const excl = _GEN_EXCLUDED[_activeGen] || new Set();
+function getTypesForGen(gen = _activeGen) {
+  const excl = _GEN_EXCLUDED[gen] || new Set();
   return TYPES.filter(t => !excl.has(t));
+}
+
+function getActiveTypes() {
+  return getTypesForGen(_activeGen);
 }
 
 /**
@@ -820,50 +825,5 @@ function buildFormNavHTML(name, slotAttr) {
 let MOVE_NAMES = [];
 
 function bindAutocompleteKeys(inputEl, suggestEl, onPick) {
-  if (!inputEl || !suggestEl || inputEl.dataset.acKeysBound === 'true') return;
-  inputEl.dataset.acKeysBound = 'true';
-  let activeIndex = -1;
-
-  const selectableItems = () => [...suggestEl.querySelectorAll('li')]
-    .filter(li => !li.classList.contains('sug-loading') && !li.classList.contains('sug-error'));
-
-  function setActive(index) {
-    const items = selectableItems();
-    if (!items.length) {
-      activeIndex = -1;
-      return;
-    }
-    activeIndex = (index + items.length) % items.length;
-    items.forEach((li, i) => {
-      const active = i === activeIndex;
-      li.classList.toggle('active', active);
-      li.setAttribute('aria-selected', active ? 'true' : 'false');
-    });
-    items[activeIndex].scrollIntoView({ block: 'nearest' });
-  }
-
-  inputEl.addEventListener('keydown', e => {
-    if (suggestEl.classList.contains('hidden')) return;
-    const items = selectableItems();
-    if (!items.length) return;
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setActive(activeIndex + 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActive(activeIndex - 1);
-    } else if (e.key === 'Enter') {
-      if (activeIndex < 0) return;
-      e.preventDefault();
-      onPick(items[activeIndex]);
-      activeIndex = -1;
-    } else if (e.key === 'Escape') {
-      suggestEl.classList.add('hidden');
-      activeIndex = -1;
-    }
-  });
-
-  inputEl.addEventListener('input', () => {
-    activeIndex = -1;
-  });
+  window.PokeBuildUI?.bindAutocompleteKeys(inputEl, suggestEl, onPick);
 }

@@ -17,7 +17,7 @@
  *   O fetch de tipos é assíncrono para não bloquear a renderização.
  *
  * Dependências: data.js (TYPES, POKEMON_DB, typeEff),
- *   api.js (PokeAPI), app.js (App.navigate).
+ *   ui.js (PokeBuildUI), api.js (PokeAPI), app.js (App.requestNavigate).
  */
 
 const Analyzer = (() => {
@@ -26,11 +26,7 @@ const Analyzer = (() => {
   let slots = [];
 
   function esc(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return PokeBuildUI.escapeHtml(str);
   }
 
   // ── Build slot HTML ───────────────────────────────────────────
@@ -254,19 +250,12 @@ const Analyzer = (() => {
       suggestEl.classList.add('hidden');
       onSlotPokemonSelected(si, li.dataset.name);
     });
-    bindAutocompleteKeys(inputEl, suggestEl, li => {
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, {
+      onPick: li => {
       inputEl.value = li.dataset.name;
       suggestEl.classList.add('hidden');
       onSlotPokemonSelected(si, li.dataset.name);
-    });
-
-    inputEl.addEventListener('blur', () => {
-      setTimeout(() => suggestEl.classList.add('hidden'), 150);
-    });
-
-    document.addEventListener('click', e => {
-      if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-        suggestEl.classList.add('hidden');
+      },
     });
   }
 
@@ -338,7 +327,8 @@ const Analyzer = (() => {
         if (info.status) moveInput.disabled = true;
       }).catch(() => {});
     });
-    bindAutocompleteKeys(moveInput, moveSug, li => {
+    PokeBuildUI.bindAutocomplete(moveInput, moveSug, {
+      onPick: li => {
       const name = li.dataset.name;
       if (!name) return;
       moveInput.value = name;
@@ -358,15 +348,7 @@ const Analyzer = (() => {
         if (statusEl) statusEl.classList.toggle('active', info.status);
         if (info.status) moveInput.disabled = true;
       }).catch(() => {});
-    });
-
-    moveInput.addEventListener('blur', () => {
-      setTimeout(() => moveSug.classList.add('hidden'), 150);
-    });
-
-    document.addEventListener('click', e => {
-      if (!moveInput.contains(e.target) && !moveSug.contains(e.target))
-        moveSug.classList.add('hidden');
+      },
     });
   }
 

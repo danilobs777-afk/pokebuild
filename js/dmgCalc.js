@@ -10,14 +10,12 @@
  * Mods aplicados em ordem: weather → crit → STAB → typeEff → burn
  *
  * Dependências: data.js (STAT_KEYS, STAT_LABELS, NATURES, POKEMON_DB, calcStat),
- *   api.js (PokeAPI.getPokemon, PokeAPI.getMove).
+ *   ui.js (PokeBuildUI), api.js (PokeAPI.getPokemon, PokeAPI.getMove).
  */
 
 const DmgCalc = (() => {
   function esc(value) {
-    return String(value ?? '').replace(/[&<>"']/g, ch => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[ch]));
+    return PokeBuildUI.escapeHtml(value);
   }
 
   function canonicalPokemonName(value) {
@@ -263,11 +261,8 @@ const DmgCalc = (() => {
       syncDerivedControls();
     });
 
-    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
-
-    document.addEventListener('click', e => {
-      if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-        suggestEl.classList.add('hidden');
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, {
+      onPick: li => li.click(),
     });
   }
 
@@ -330,7 +325,8 @@ const DmgCalc = (() => {
         icon.onerror = () => icon.classList.add('hidden');
       }
     });
-    bindAutocompleteKeys(inputEl, suggestEl, li => {
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, {
+      onPick: li => {
       const value = li.dataset.value;
       if (!value) return;
       inputEl.value = value;
@@ -341,10 +337,7 @@ const DmgCalc = (() => {
         icon.classList.remove('hidden');
         icon.onerror = () => icon.classList.add('hidden');
       }
-    });
-
-    inputEl.addEventListener('blur', () => {
-      setTimeout(() => suggestEl.classList.add('hidden'), 150);
+      },
     });
   }
 
@@ -391,14 +384,12 @@ const DmgCalc = (() => {
       inputEl.value = li.dataset.name;
       suggestEl.classList.add('hidden');
     });
-    bindAutocompleteKeys(inputEl, suggestEl, li => {
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, {
+      onPick: li => {
       if (!li.dataset.name) return;
       inputEl.value = li.dataset.name;
       suggestEl.classList.add('hidden');
-    });
-
-    inputEl.addEventListener('blur', () => {
-      setTimeout(() => suggestEl.classList.add('hidden'), 150);
+      },
     });
   }
 
@@ -658,11 +649,8 @@ const DmgCalc = (() => {
       suggestEl.classList.add('hidden');
       loadMove(li.dataset.name);
     });
-    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
-
-    document.addEventListener('click', e => {
-      if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-        suggestEl.classList.add('hidden');
+    PokeBuildUI.bindAutocomplete(inputEl, suggestEl, {
+      onPick: li => li.click(),
     });
   }
 

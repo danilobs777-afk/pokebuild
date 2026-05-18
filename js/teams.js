@@ -288,11 +288,7 @@ const TeamsView = (() => {
    * Necessário porque nomes de times e Pokémon são renderizados via innerHTML.
    */
   function escHtml(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return PokeBuildUI.escapeHtml(str);
   }
 
   function exportCurrentTeam() {
