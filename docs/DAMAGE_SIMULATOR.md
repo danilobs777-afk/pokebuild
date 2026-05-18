@@ -22,7 +22,15 @@ O calculo interno antigo permanece como rede de seguranca. Ele entra quando:
 - a especie ou o golpe nao foi resolvido na base do Smogon Calc;
 - algum caso inesperado retorna um formato de dano que a camada adaptadora nao entende.
 
-Quando o fallback entra, a UI mostra aviso. Esse modo e util para nao quebrar a experiencia, mas nao deve ser tratado como simulacao cartucho-perfeita.
+Quando o fallback entra, a UI mostra aviso e identifica o resultado como estimativa simplificada. Esse modo e util para nao quebrar a experiencia, mas nao deve ser tratado como simulacao cartucho-perfeita.
+
+Regras do fallback:
+
+- exige stats reais carregados para atacante e defensor;
+- nao usa base stat generico como substituto silencioso;
+- avisa quando controles avancados nao foram aplicados;
+- usa formula moderna simplificada, nao regras exatas por cartucho;
+- deve permanecer pequeno para nao virar um segundo motor competitivo paralelo.
 
 ## Camadas
 

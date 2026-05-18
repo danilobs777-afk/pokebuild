@@ -596,6 +596,35 @@ const DmgCalc = (() => {
     };
   }
 
+  function fallbackIgnoredControls() {
+    const ignored = [];
+    const gameType = document.getElementById('dmg-game-type')?.value || 'Singles';
+    const selectedGen = readNumber('dmg-calc-gen', defaultCalcGen());
+    const forcedHits = document.getElementById('dmg-hit-count')?.value || 'auto';
+
+    if (selectedGen !== 9) ignored.push('geracao exata');
+    if (gameType === 'Doubles') ignored.push('Doubles e spread damage');
+    if (readChecked('dmg-reflect') || readChecked('dmg-light-screen') || readChecked('dmg-aurora-veil')) {
+      ignored.push('Reflect, Light Screen e Aurora Veil');
+    }
+    if (readChecked('dmg-helping-hand')) ignored.push('Helping Hand');
+    if (readChecked('dmg-friend-guard')) ignored.push('Friend Guard');
+    if (readChecked('dmg-protected')) ignored.push('Protect');
+    if (readChecked('dmg-gravity')) ignored.push('Gravity');
+    if (teraValue('dmg-atk') || teraValue('dmg-def')) ignored.push('Tera Type');
+    if (forcedHits !== 'auto') ignored.push('multi-hit forcado');
+    if (
+      readChecked('dmg-atk-tailwind') ||
+      readChecked('dmg-def-tailwind') ||
+      readChecked('dmg-atk-paralyzed') ||
+      readChecked('dmg-def-paralyzed')
+    ) {
+      ignored.push('Tailwind/paralisia no dano');
+    }
+
+    return ignored;
+  }
+
   function stageMultiplier(s) {
     return s >= 0 ? (2 + s) / 2 : 2 / (2 - s);
   }
@@ -779,7 +808,7 @@ const DmgCalc = (() => {
     const defBs = getBaseStats('dmg-def');
     const level  = parseInt(document.getElementById('dmg-atk-level').value) || 50;
     const warnings = [];
-    const fallbackWarnings = [];
+    const fallbackMissingStats = [];
     if (!cachedMove) {
       setValidation('error', 'Selecione um golpe no autocomplete antes de calcular.');
       return;
@@ -792,8 +821,8 @@ const DmgCalc = (() => {
       return;
     }
 
-    if (!atkBs) fallbackWarnings.push('Atacante sem stats reais carregados: fallback interno usaria base 80.');
-    if (!defBs) fallbackWarnings.push('Defensor sem stats reais carregados: fallback interno usaria base 80.');
+    if (!atkBs) fallbackMissingStats.push('Atacante sem stats reais carregados.');
+    if (!defBs) fallbackMissingStats.push('Defensor sem stats reais carregados.');
 
     const moveCategory = cachedMove?.damage_class?.name || 'physical';
     const isSpecial = moveCategory === 'special';
@@ -893,14 +922,27 @@ const DmgCalc = (() => {
         smogonDescription = smogonResult.description || '';
         usedSmogonEngine = true;
       } catch (err) {
-        warnings.push(`Motor Smogon local nao conseguiu calcular (${err.message}). Usando fallback interno.`);
+        warnings.push(`Motor Smogon local nao conseguiu calcular (${err.message}). Tentando fallback interno simplificado.`);
       }
     } else {
-      warnings.push('Motor Smogon local nao carregado. Usando fallback interno.');
+      warnings.push('Motor Smogon local nao carregado. Tentando fallback interno simplificado.');
     }
 
     if (!usedSmogonEngine) {
-      warnings.push(...fallbackWarnings);
+      if (fallbackMissingStats.length) {
+        setValidation('error', [
+          ...warnings,
+          ...fallbackMissingStats,
+          'O fallback interno simplificado exige stats reais carregados. Selecione atacante e defensor pelo autocomplete antes de calcular.',
+        ]);
+        return;
+      }
+
+      const ignoredControls = fallbackIgnoredControls();
+      warnings.push('Fallback interno simplificado ativo: resultado e uma estimativa, nao uma simulacao cartucho-perfeita.');
+      warnings.push('Fallback usa formula moderna simplificada; geracao exata, excecoes de golpe e interacoes avancadas pertencem ao motor Smogon.');
+      if (ignoredControls.length) warnings.push(`Controles avancados nao aplicados pelo fallback: ${ignoredControls.join(', ')}.`);
+
       rolls = calcDamage(atkStatFinal, defStatFinal, powerFinal, level,
         { stab, typeEff: typeEffMod, crit, weather, burnAtkPenalty: activeBurnDrop, critMult: atkMods.critMult });
 
@@ -939,12 +981,13 @@ const DmgCalc = (() => {
       ...atkMods.notes,
       ...fieldNotes,
       usedSmogonEngine ? 'smogon-engine' : '',
+      !usedSmogonEngine ? 'fallback-engine' : '',
       burnAtkRaw && moveCategory !== 'physical' ? 'burn-special' : '',
       burnAtkRaw && atkMods.ignoreBurnDrop ? 'burn-ignored' : '',
       activeBurnDrop ? 'burn-attack' : '',
     ].filter(Boolean);
     const validationMessages = warnings.length ? warnings : [
-      usedSmogonEngine ? 'Calculo pronto com Smogon Calc local.' : 'Calculo pronto com fallback interno.',
+      usedSmogonEngine ? 'Calculo pronto com Smogon Calc local.' : 'Calculo pronto com fallback interno simplificado.',
     ];
     setValidation(warnings.length ? 'warning' : 'success', validationMessages);
     renderResults(rolls, resultDefHp, {
@@ -1020,6 +1063,9 @@ const DmgCalc = (() => {
       const notes = [];
       if (extraNotes.includes('smogon-engine')) {
         notes.push('Smogon Calc local — motor oficial da comunidade aplicado para formula, itens, habilidades, telas, Tera e casos especiais de golpes.');
+      }
+      if (extraNotes.includes('fallback-engine')) {
+        notes.push('Fallback interno simplificado — estimativa de emergencia com formula moderna basica; nao replica todos os detalhes do jogo.');
       }
       engineNotes.filter(Boolean).forEach(note => notes.push(esc(note)));
       if (engineDescription) notes.push(esc(engineDescription));
