@@ -32,7 +32,9 @@ const TypeCalc = (() => {
     const img = document.getElementById('tc-sprite-img');
     ph.classList.add('hidden');
     ph.classList.remove('missingno');
-    img.src = PokeAPI.spriteForGen(data, App.getGen());
+    // Type Calc mantém a artwork oficial para preservar o layout visual.
+    // A gen-bar continua afetando tabela de tipos e cálculos, não a imagem aqui.
+    img.src = PokeAPI.officialArtworkUrl(data);
     img.alt = name;
     img.classList.remove('hidden');
   }
@@ -103,6 +105,7 @@ const TypeCalc = (() => {
       e.preventDefault();
       selectPokemon(li.dataset.name);
     });
+    bindAutocompleteKeys(inputEl, suggestEl, li => selectPokemon(li.dataset.name));
 
     // Blur: apenas fecha sugestões, sem limpar o campo
     inputEl.addEventListener('blur', () => {
@@ -159,7 +162,12 @@ const TypeCalc = (() => {
 
   // ── Populate selects ──────────────────────────────────────────
   function initSelects() {
-    const sorted = TYPES.slice().sort();
+    const current = {
+      t1: document.getElementById('tc-type1')?.value || '',
+      t2: document.getElementById('tc-type2')?.value || '',
+      tera: document.getElementById('tc-tera')?.value || '',
+    };
+    const sorted = getActiveTypes().slice().sort();
 
     document.getElementById('tc-type1').innerHTML =
       `<option value="">— Selecionar —</option>` +
@@ -172,6 +180,23 @@ const TypeCalc = (() => {
     document.getElementById('tc-tera').innerHTML =
       `<option value="">— Sem Tera —</option>` +
       sorted.map(t => `<option value="${t}">${t}</option>`).join('');
+
+    const type1El = document.getElementById('tc-type1');
+    const type2El = document.getElementById('tc-type2');
+    const teraEl = document.getElementById('tc-tera');
+    type1El.value = sorted.includes(current.t1) ? current.t1 : '';
+    type2El.value = sorted.includes(current.t2) ? current.t2 : '';
+    teraEl.value = sorted.includes(current.tera) ? current.tera : '';
+    if (_defTypes) _defTypes = [type1El.value, type2El.value].filter(Boolean);
+    _tera = teraEl.value || null;
+
+    const wrap = document.getElementById('tc-tera-toggle-wrap');
+    if (wrap) {
+      const enabled = !!teraEl.value;
+      wrap.style.opacity = enabled ? '1' : '0.35';
+      wrap.style.pointerEvents = enabled ? '' : 'none';
+      if (!enabled) document.getElementById('tc-tera-toggle').checked = false;
+    }
   }
 
   // ── Result rendering ──────────────────────────────────────────
@@ -352,7 +377,12 @@ const TypeCalc = (() => {
   }
 
   function rerender() {
+    initSelects();
     if (!_defTypes) return;
+    if (!_defTypes.length) {
+      document.getElementById('tc-results')?.classList.add('hidden');
+      return;
+    }
     _profile     = calcProfile(_defTypes);
     _teraProfile = _tera ? calcProfile([_tera]) : null;
     const useTera = document.getElementById('tc-tera-toggle').checked && !!_teraProfile;

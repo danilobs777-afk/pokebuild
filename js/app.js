@@ -16,6 +16,7 @@
 
 const App = (() => {
   const views = ['type-calc', 'analyzer', 'builder', 'my-teams', 'damage-sim'];
+  let pendingConfirmCallback = null;
 
   /**
    * Ativa a view indicada e desativa as demais.
@@ -34,9 +35,23 @@ const App = (() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function requestNavigate(viewId, options = {}) {
+    const runNavigation = () => {
+      options.beforeNavigate?.();
+      navigate(viewId);
+    };
+    const leavingBuilder = document.getElementById('view-builder')?.classList.contains('active') && viewId !== 'builder';
+    if (leavingBuilder && Builder.hasUnsavedChanges?.()) {
+      showConfirm('Voce tem alteracoes nao salvas no Builder. Sair mesmo assim?', runNavigation);
+      return false;
+    }
+    runNavigation();
+    return true;
+  }
+
   function initNav() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => navigate(btn.dataset.view));
+      btn.addEventListener('click', () => requestNavigate(btn.dataset.view));
     });
   }
 
@@ -66,10 +81,15 @@ const App = (() => {
   function initModals() {
     const exportModal = document.getElementById('export-modal');
     document.getElementById('modal-close-btn').addEventListener('click', () => exportModal.classList.add('hidden'));
-    document.getElementById('modal-copy-btn').addEventListener('click', () => {
+    document.getElementById('modal-copy-btn').addEventListener('click', async () => {
       const ta = document.getElementById('export-text');
       ta.select();
-      document.execCommand('copy');
+      try {
+        if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(ta.value);
+        else document.execCommand('copy');
+      } catch {
+        document.execCommand('copy');
+      }
       document.getElementById('modal-copy-btn').textContent = 'Copiado!';
       setTimeout(() => { document.getElementById('modal-copy-btn').textContent = 'Copiar para Área de Transferência'; }, 1800);
     });
@@ -83,12 +103,19 @@ const App = (() => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
+      document.getElementById('modal-download-btn').textContent = 'Arquivo salvo';
+      setTimeout(() => { document.getElementById('modal-download-btn').textContent = 'Salvar .txt'; }, 1800);
     });
     exportModal.addEventListener('click', e => { if (e.target === exportModal) exportModal.classList.add('hidden'); });
 
     const confirmModal = document.getElementById('confirm-modal');
-    document.getElementById('confirm-cancel-btn').addEventListener('click', () => confirmModal.classList.add('hidden'));
-    confirmModal.addEventListener('click', e => { if (e.target === confirmModal) confirmModal.classList.add('hidden'); });
+    document.getElementById('confirm-cancel-btn').addEventListener('click', closeConfirmModal);
+    document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+      const onOk = pendingConfirmCallback;
+      closeConfirmModal();
+      onOk?.();
+    });
+    confirmModal.addEventListener('click', e => { if (e.target === confirmModal) closeConfirmModal(); });
   }
 
   // ── Seletor de geração ────────────────────────────────────────
@@ -100,6 +127,8 @@ const App = (() => {
     document.querySelectorAll('.gen-btn').forEach(b => b.classList.toggle('active', b.dataset.gen === gen));
     TypeCalc.rerender();
     Analyzer.rerender();
+    Builder.syncWithGlobalGen?.();
+    DmgCalc.rerender?.();
   }
 
   function initGenSelector() {
@@ -111,18 +140,23 @@ const App = (() => {
   let _exportFilename = 'time';
 
   function showExportModal(text, filename) {
-    _exportFilename = filename || 'time';
+    _exportFilename = (filename || 'time').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'time';
     document.getElementById('export-text').value = text;
+    document.getElementById('modal-copy-btn').textContent = 'Copiar para Ãrea de TransferÃªncia';
+    document.getElementById('modal-download-btn').textContent = 'Salvar .txt';
     document.getElementById('export-modal').classList.remove('hidden');
   }
 
   function showConfirm(msg, onOk) {
     document.getElementById('confirm-msg').textContent = msg;
     const modal = document.getElementById('confirm-modal');
+    pendingConfirmCallback = typeof onOk === 'function' ? onOk : null;
     modal.classList.remove('hidden');
-    const btn = document.getElementById('confirm-ok-btn');
-    const handler = () => { modal.classList.add('hidden'); onOk(); btn.removeEventListener('click', handler); };
-    btn.addEventListener('click', handler);
+  }
+
+  function closeConfirmModal() {
+    pendingConfirmCallback = null;
+    document.getElementById('confirm-modal')?.classList.add('hidden');
   }
 
   function init() {
@@ -141,5 +175,5 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { navigate, showExportModal, showConfirm, getGen: () => _currentGen, setGen };
+  return { navigate, requestNavigate, showExportModal, showConfirm, getGen: () => _currentGen, setGen };
 })();

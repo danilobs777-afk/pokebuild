@@ -25,9 +25,17 @@ const Analyzer = (() => {
   // Cada slot: { name, type1, type2, tera, moves:[{mtype,status}] }
   let slots = [];
 
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   // ── Build slot HTML ───────────────────────────────────────────
   function buildSlotHTML(i) {
-    const typeOpts = TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+    const typeOpts = getActiveTypes().map(t => `<option value="${t}">${t}</option>`).join('');
     const movePills = [0,1,2,3].map(m => `
       <div class="move-row" data-slot="${i}" data-move="${m}">
         <div class="autocomplete-wrap">
@@ -155,11 +163,48 @@ const Analyzer = (() => {
     });
   }
 
+  function setTypeSelectOptions(selectEl, placeholder, value) {
+    if (!selectEl) return '';
+    const activeTypes = getActiveTypes();
+    const safeValue = activeTypes.includes(value) ? value : '';
+    selectEl.innerHTML = `<option value="">${placeholder}</option>` +
+      activeTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+    selectEl.value = safeValue;
+    return safeValue;
+  }
+
+  function syncSlotsWithActiveGen() {
+    if (!slots.length) return;
+    const active = new Set(getActiveTypes());
+    slots.forEach((slot, si) => {
+      if (slot.type1 && !active.has(slot.type1)) slot.type1 = '';
+      if (slot.type2 && !active.has(slot.type2)) slot.type2 = '';
+      if (slot.tera && !active.has(slot.tera)) slot.tera = '';
+      slot.moves.forEach(move => {
+        if (move.mtype && !active.has(move.mtype)) move.mtype = '';
+      });
+
+      const card = document.getElementById(`az-slot-${si}`);
+      if (!card) return;
+      slot.type1 = setTypeSelectOptions(card.querySelector(`.az-type1[data-slot="${si}"]`), 'Tipo 1', slot.type1);
+      slot.type2 = setTypeSelectOptions(card.querySelector(`.az-type2[data-slot="${si}"]`), 'Tipo 2', slot.type2);
+      slot.tera = setTypeSelectOptions(card.querySelector(`.az-tera[data-slot="${si}"]`), 'Tera', slot.tera);
+      slot.moves.forEach((move, mi) => {
+        move.mtype = setTypeSelectOptions(
+          card.querySelector(`.az-mtype[data-slot="${si}"][data-move="${mi}"]`),
+          '- Tipo -',
+          move.mtype
+        );
+      });
+    });
+    updateActionButtons();
+  }
+
   function showSlotSprite(si, data, name) {
     const wrap = document.getElementById(`az-sprite-${si}`);
     wrap.querySelector('.az-sprite-ph').classList.add('hidden');
     const img = wrap.querySelector('.az-sprite-img');
-    img.src = PokeAPI.spriteForGen(data, App.getGen());
+    img.src = PokeAPI.pixelSpriteUrl(data);
     img.alt = name;
     img.classList.remove('hidden');
   }
@@ -205,6 +250,11 @@ const Analyzer = (() => {
       const li = e.target.closest('li');
       if (!li) return;
       e.preventDefault();
+      inputEl.value = li.dataset.name;
+      suggestEl.classList.add('hidden');
+      onSlotPokemonSelected(si, li.dataset.name);
+    });
+    bindAutocompleteKeys(inputEl, suggestEl, li => {
       inputEl.value = li.dataset.name;
       suggestEl.classList.add('hidden');
       onSlotPokemonSelected(si, li.dataset.name);
@@ -278,11 +328,33 @@ const Analyzer = (() => {
         if (!info) return;
         const card = document.getElementById(`az-slot-${si}`);
         if (!card) return;
-        slots[si].moves[mi].mtype  = info.type;
+        const safeType = new Set(getActiveTypes()).has(info.type) ? info.type : '';
+        slots[si].moves[mi].mtype  = safeType;
         slots[si].moves[mi].status = info.status;
         const typeEl   = card.querySelector(`.az-mtype[data-slot="${si}"][data-move="${mi}"]`);
         const statusEl = card.querySelector(`.status-btn[data-slot="${si}"][data-move="${mi}"]`);
-        if (typeEl)   { typeEl.value = info.type; typeEl.disabled = info.status; }
+        if (typeEl)   { typeEl.value = safeType; typeEl.disabled = info.status; }
+        if (statusEl) statusEl.classList.toggle('active', info.status);
+        if (info.status) moveInput.disabled = true;
+      }).catch(() => {});
+    });
+    bindAutocompleteKeys(moveInput, moveSug, li => {
+      const name = li.dataset.name;
+      if (!name) return;
+      moveInput.value = name;
+      slots[si].moves[mi].moveName = name;
+      moveSug.classList.add('hidden');
+      updateActionButtons();
+      PokeAPI.getMoveInfo(name).then(info => {
+        if (!info) return;
+        const card = document.getElementById(`az-slot-${si}`);
+        if (!card) return;
+        const safeType = new Set(getActiveTypes()).has(info.type) ? info.type : '';
+        slots[si].moves[mi].mtype = safeType;
+        slots[si].moves[mi].status = info.status;
+        const typeEl = card.querySelector(`.az-mtype[data-slot="${si}"][data-move="${mi}"]`);
+        const statusEl = card.querySelector(`.status-btn[data-slot="${si}"][data-move="${mi}"]`);
+        if (typeEl) { typeEl.value = safeType; typeEl.disabled = info.status; }
         if (statusEl) statusEl.classList.toggle('active', info.status);
         if (info.status) moveInput.disabled = true;
       }).catch(() => {});
@@ -307,8 +379,9 @@ const Analyzer = (() => {
     const entry = POKEMON_DB[name];
     slots[si].name = name;
     if (entry) {
-      slots[si].type1 = entry[0] || '';
-      slots[si].type2 = entry[1] || '';
+      const active = new Set(getActiveTypes());
+      slots[si].type1 = active.has(entry[0]) ? entry[0] : '';
+      slots[si].type2 = active.has(entry[1]) ? entry[1] : '';
       const card = document.getElementById(`az-slot-${si}`);
       card.querySelector(`.az-type1[data-slot="${si}"]`).value = slots[si].type1;
       card.querySelector(`.az-type2[data-slot="${si}"]`).value = slots[si].type2;
@@ -326,27 +399,21 @@ const Analyzer = (() => {
   // ── Import / Transfer ─────────────────────────────────────────
 
   function normalizePokeName(raw) {
-    if (!raw) return '';
-    if (POKEMON_DB[raw]) return raw;
-    const cap = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-    if (POKEMON_DB[cap]) return cap;
-    const lower = raw.toLowerCase();
-    return Object.keys(POKEMON_DB).find(k => k.toLowerCase() === lower) || '';
+    const normalized = normalizePokemonName(raw);
+    return POKEMON_DB[normalized] ? normalized : '';
   }
 
   function parseSmogon(text) {
+    const normalizeType = raw => TYPES.find(t => t.toLowerCase() === String(raw || '').trim().toLowerCase()) || '';
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     return text.trim().split(/\n[ \t]*\n/).filter(b => b.trim()).slice(0, SLOTS).map(block => {
       const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
       if (!lines.length) return null;
 
       // Cabeçalho: "Espécie @ Item" ou "Apelido (Espécie) @ Item"
-      const header = lines[0];
-      const inParen = header.match(/\(([^)]+)\)/);
-      const rawName = inParen ? inParen[1].trim() : (header.split('@')[0]).trim();
-
-      const itemM = header.match(/@\s*(.+)$/);
-      const item = itemM ? itemM[1].trim() : '';
+      const header = parseSmogonHeader(lines[0]);
+      const rawName = header.species;
+      const item = header.item;
 
       let ability = '', tera = '', nature = '', evs = '', ivs = '';
       const moves = [];
@@ -354,11 +421,11 @@ const Analyzer = (() => {
       for (let i = 1; i < lines.length; i++) {
         const l = lines[i];
         if      (l.startsWith('Ability:'))   ability = l.slice(8).trim();
-        else if (l.startsWith('Tera Type:')) tera    = l.slice(10).trim();
+        else if (l.startsWith('Tera Type:')) tera    = normalizeType(l.slice(10));
         else if (l.startsWith('EVs:'))       evs     = l.slice(4).trim();
         else if (l.startsWith('IVs:'))       ivs     = l.slice(4).trim();
         else if (l.endsWith('Nature'))       nature  = l.split(' ')[0];
-        else if (l.startsWith('- ') && moves.length < 4) moves.push(l.slice(2).trim());
+        else if (/^(?:-|•)\s+/.test(l) && moves.length < 4) moves.push(l.replace(/^(?:-|•)\s+/, '').trim());
       }
 
       return { species: rawName, item, ability, tera, nature, evs, ivs, moves };
@@ -370,13 +437,14 @@ const Analyzer = (() => {
 
     parsed.slice(0, SLOTS).forEach((p, i) => {
       const name = normalizePokeName(p.species);
+      const active = new Set(getActiveTypes());
       slots[i].name  = name || p.species;
-      slots[i].tera  = TYPES.includes(p.tera) ? p.tera : '';
+      slots[i].tera  = active.has(p.tera) ? p.tera : '';
 
       const entry = POKEMON_DB[name] || POKEMON_DB[p.species] || null;
       if (entry) {
-        slots[i].type1 = entry[0] || '';
-        slots[i].type2 = entry[1] || '';
+        slots[i].type1 = active.has(entry[0]) ? entry[0] : '';
+        slots[i].type2 = active.has(entry[1]) ? entry[1] : '';
       }
 
       p.moves.forEach((moveName, mi) => {
@@ -428,6 +496,7 @@ const Analyzer = (() => {
     if (!allNames.length) return;
 
     const infoMap = await PokeAPI.getMovesInfo(allNames);
+    const active = new Set(getActiveTypes());
 
     parsed.slice(0, SLOTS).forEach((p, i) => {
       const card = document.getElementById(`az-slot-${i}`);
@@ -436,12 +505,12 @@ const Analyzer = (() => {
         if (mi >= 4 || !moveName) return;
         const info = infoMap[moveName];
         if (!info) return;
-        slots[i].moves[mi].mtype  = info.type;
+        slots[i].moves[mi].mtype  = active.has(info.type) ? info.type : '';
         slots[i].moves[mi].status = info.status;
         const typeEl   = card.querySelector(`.az-mtype[data-slot="${i}"][data-move="${mi}"]`);
         const nameEl   = card.querySelector(`.az-movename[data-slot="${i}"][data-move="${mi}"]`);
         const statusEl = card.querySelector(`.status-btn[data-slot="${i}"][data-move="${mi}"]`);
-        if (typeEl)   { typeEl.value = info.type; typeEl.disabled = info.status; }
+        if (typeEl)   { typeEl.value = slots[i].moves[mi].mtype; typeEl.disabled = info.status; }
         if (nameEl)   nameEl.disabled = info.status;
         if (statusEl) statusEl.classList.toggle('active', info.status);
       });
@@ -470,28 +539,28 @@ const Analyzer = (() => {
     }
     listEl.innerHTML = teams.map((team, idx) => {
       const date = team.created ? new Date(team.created).toLocaleDateString('pt-BR') : '';
-      const sprites = (team.members || []).slice(0, 6).map(m =>
+      const sprites = (team.members || []).slice(0, 6).map((m, mi) =>
         `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
-          class="tc-sprite" data-name="${m.name}" alt="${m.name}" loading="lazy">`
+          class="tc-sprite" data-member="${mi}" alt="${esc(m.name)}" loading="lazy">`
       ).join('');
       return `<div class="saved-team-item">
         <div class="saved-team-info">
-          <span class="saved-team-name">${team.name || `Time ${idx + 1}`}</span>
-          <span class="saved-team-date">${date}</span>
+          <span class="saved-team-name">${esc(team.name || `Time ${idx + 1}`)}</span>
+          <span class="saved-team-date">${esc(date)}</span>
         </div>
-        <div class="team-card-sprites" id="az-imp-spr-${team.id}">${sprites}</div>
+        <div class="team-card-sprites" id="az-imp-spr-${idx}">${sprites}</div>
         <button class="btn-secondary btn-sm" data-load="${idx}">Carregar</button>
       </div>`;
     }).join('');
 
-    teams.forEach(team => {
-      (team.members || []).slice(0, 6).forEach(m => {
+    teams.forEach((team, idx) => {
+      (team.members || []).slice(0, 6).forEach((m, mi) => {
         if (!m.name) return;
         PokeAPI.getPokemon(m.name).then(data => {
-          const wrap = document.getElementById(`az-imp-spr-${team.id}`);
+          const wrap = document.getElementById(`az-imp-spr-${idx}`);
           if (!wrap) return;
-          const img = wrap.querySelector(`[data-name="${m.name}"]`);
-          if (img) img.src = PokeAPI.spriteUrl(data.id);
+          const img = wrap.querySelector(`[data-member="${mi}"]`);
+          if (img) img.src = PokeAPI.pixelSpriteUrl(data, !!m.shiny, m.gender === 'female');
         }).catch(() => {});
       });
     });
@@ -550,10 +619,16 @@ const Analyzer = (() => {
       moves: s.moves.map(m => m.moveName)
     }));
 
-    try { localStorage.setItem('az_team_draft', JSON.stringify(draft)); } catch {}
+    const writeDraft = () => {
+      try { localStorage.setItem('az_team_draft', JSON.stringify(draft)); } catch {}
+    };
 
-    const btn = document.querySelector('.nav-btn[data-view="builder"]');
-    if (btn) btn.click();
+    if (App.requestNavigate) App.requestNavigate('builder', { beforeNavigate: writeDraft });
+    else {
+      writeDraft();
+      const btn = document.querySelector('.nav-btn[data-view="builder"]');
+      if (btn) btn.click();
+    }
   }
 
   // ── Analysis logic ────────────────────────────────────────────
@@ -599,7 +674,8 @@ const Analyzer = (() => {
   // Com Tera: Tera type é terceiro tipo ofensivo — nunca remove cobertura existente.
   function computeCoverage(useTera) {
     const result = {};
-    TYPES.forEach(def => { result[def] = { mult: 0, contribs: [] }; });
+    const activeTypes = getActiveTypes();
+    activeTypes.forEach(def => { result[def] = { mult: 0, contribs: [] }; });
 
     for (let si = 0; si < slots.length; si++) {
       const slot = slots[si];
@@ -615,7 +691,7 @@ const Analyzer = (() => {
         else movesToCheck.push({ mtype: slot.tera, isStab: true });
       }
       for (const { mtype, isStab } of movesToCheck) {
-        for (const defT of TYPES) {
+        for (const defT of activeTypes) {
           const eff = typeEff(mtype, [defT]);
           if (eff < result[defT].mult) continue;
           if (eff > result[defT].mult) result[defT] = { mult: eff, contribs: [] };
@@ -629,7 +705,7 @@ const Analyzer = (() => {
 
   // Fraqueza do time: por tipo atacante, quantos membros são fracos?
   function computeTeamWeakness(useTera) {
-    return TYPES.map(atkType => {
+    return getActiveTypes().map(atkType => {
       const row = { atkType, slots: [] };
       for (const slot of slots) {
         const dt = defTypes(slot, useTera);
@@ -644,7 +720,7 @@ const Analyzer = (() => {
 
   // Matchup ofensivo: por tipo defensor, quem tem SE e quem tem neutro + nome do golpe
   function computeOffensiveMatchup(useTera) {
-    return TYPES.map(defT => {
+    return getActiveTypes().map(defT => {
       const se = [], neutral = [];
       for (let si = 0; si < slots.length; si++) {
         const slot = slots[si];
@@ -700,7 +776,7 @@ const Analyzer = (() => {
     const result = computeCoverage(useTera);
 
     const se = [], neu = [], gap = [];
-    TYPES.forEach(t => {
+    getActiveTypes().forEach(t => {
       const m = result[t].mult;
       if (m >= 2)    se.push(t);
       else if (m >= 1) neu.push(t);
@@ -1061,6 +1137,7 @@ const Analyzer = (() => {
   }
 
   function rerender() {
+    syncSlotsWithActiveGen();
     const resultsEl = document.getElementById('az-results');
     if (!resultsEl || resultsEl.classList.contains('hidden')) return;
     const hasAny = slots.some(s => s.type1 || s.type2 || s.name);

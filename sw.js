@@ -1,4 +1,5 @@
-const CACHE = 'pokebuild-v1';
+const CACHE_VERSION = 'v17';
+const CACHE = `pokebuild-${CACHE_VERSION}`;
 const ASSETS = [
   '.',
   'index.html',
@@ -16,26 +17,57 @@ const ASSETS = [
   'manifest.json',
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    const staleCaches = keys.filter(key => key.startsWith('pokebuild-') && key !== CACHE);
+    await Promise.all(staleCaches.map(key => caches.delete(key)));
+    await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach(client => client.postMessage({
+      type: 'POKEBUILD_SW_ACTIVATED',
+      version: CACHE_VERSION,
+      isUpdate: staleCaches.length > 0
+    }));
+  })());
 });
 
-self.addEventListener('fetch', e => {
-  // Requisições externas (PokéAPI, Google Fonts) passam direto
-  if (!e.request.url.startsWith(self.location.origin)) return;
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  if (!request.url.startsWith(self.location.origin)) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstHtml(request));
+    return;
+  }
+
+  event.respondWith(cacheFirstAsset(request));
 });
+
+async function networkFirstHtml(request) {
+  const cache = await caches.open(CACHE);
+  try {
+    const response = await fetch(request);
+    cache.put('index.html', response.clone());
+    return response;
+  } catch {
+    return (await cache.match('index.html')) || Response.error();
+  }
+}
+
+async function cacheFirstAsset(request) {
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  cache.put(request, response.clone());
+  return response;
+}

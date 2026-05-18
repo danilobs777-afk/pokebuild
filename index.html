@@ -278,6 +278,7 @@
       <button class="btn-secondary" id="bld-clear-btn"    disabled>Limpar</button>
     </div>
 
+    <div id="bld-draft-status" class="bld-draft-status"></div>
     <div id="bld-validation-box" class="validation-box hidden"></div>
 
     <!-- Modal de importação -->
@@ -292,6 +293,7 @@
         <div id="bld-itab-smogon" class="itab-panel">
           <p class="hint-text">Cole o texto no formato Smogon ou carregue um arquivo <code>.txt</code></p>
           <textarea id="bld-smogon-text" class="smogon-area" placeholder="Pikachu @ Light Ball&#10;Ability: Static&#10;EVs: 252 SpA / 4 HP / 252 Spe&#10;Timid Nature&#10;- Thunderbolt&#10;- Volt Switch&#10;- Hidden Power Ice&#10;- Surf&#10;&#10;Charizard @ Choice Specs&#10;..."></textarea>
+          <div id="bld-import-preview" class="import-preview hidden"></div>
           <div class="modal-actions">
             <label class="btn-secondary btn-file-label">
               Arquivo .txt
@@ -321,8 +323,9 @@
       <p class="view-sub">Times salvos – clique para ver detalhes</p>
     </div>
 
-    <div style="margin-bottom:14px;">
-      <input type="text" id="mt-search" class="text-input" placeholder="Buscar por nome do time ou Pokémon…" style="width:100%;max-width:420px;">
+    <div class="mt-topbar">
+      <input type="text" id="mt-search" class="text-input" placeholder="Buscar por nome do time ou Pokemon...">
+      <div id="mt-summary" class="mt-summary"></div>
     </div>
 
     <div id="mt-gallery" class="teams-grid">
@@ -335,11 +338,11 @@
 
     <!-- Team detail overlay -->
     <div id="mt-detail" class="hidden">
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
-        <button class="btn-secondary" id="mt-back-btn">← Voltar</button>
-        <button class="btn-secondary" id="mt-detail-rename-btn">✎ Renomear</button>
+      <div class="mt-detail-toolbar">
+        <button class="btn-secondary" id="mt-back-btn">Voltar</button>
+        <button class="btn-secondary" id="mt-detail-rename-btn">Renomear</button>
         <button class="btn-secondary" id="mt-detail-export-btn">Exportar</button>
-        <button class="btn-secondary" id="mt-detail-edit-btn">✎ Editar no Builder</button>
+        <button class="btn-secondary" id="mt-detail-edit-btn">Editar no Builder</button>
         <button class="btn-danger" id="mt-detail-delete-btn">Excluir Time</button>
       </div>
       <div id="mt-detail-header" class="detail-header"></div>
@@ -386,7 +389,8 @@
           <label class="field-label">Modificadores</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <label class="check-label"><input type="checkbox" id="dmg-crit"> Crítico</label>
-            <label class="check-label"><input type="checkbox" id="dmg-burned"> Queimado (Atk÷2 + chip)</label>
+            <label class="check-label"><input type="checkbox" id="dmg-burn-atk"> Burn ofensivo</label>
+            <label class="check-label"><input type="checkbox" id="dmg-atk-burn-chip"> Chip burn atacante</label>
             <label class="check-label"><input type="checkbox" id="dmg-stab"> STAB</label>
             <label class="check-label"><input type="checkbox" id="dmg-trick-room"> Trick Room</label>
           </div>
@@ -420,6 +424,7 @@
             <option value="2">2× (fraco)</option>
             <option value="4">4× (fraqueza dupla)</option>
           </select>
+          <div id="dmg-auto-notes" class="dmg-auto-notes"></div>
         </div>
         <div class="field-group">
           <label class="field-label">Status do Defensor (end-of-turn)</label>
@@ -441,6 +446,7 @@
           </select>
         </div>
         <button class="btn-primary" id="dmg-calc-btn" style="margin-top:12px;width:100%">Calcular Dano</button>
+        <div id="dmg-validation" class="dmg-validation hidden" role="status" aria-live="polite"></div>
       </div>
 
       <!-- Defender -->
@@ -506,8 +512,51 @@
 <script src="js/dmgCalc.js"></script>
 <script src="js/app.js"></script>
 <script>
+  if (new URLSearchParams(location.search).has('smoke')) {
+    const smokeScript = document.createElement('script');
+    smokeScript.src = 'tests/smoke.js?run=' + Date.now();
+    document.body.appendChild(smokeScript);
+  }
+
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
+    const SW_VERSION_KEY = 'pokebuild-sw-version';
+    const showUpdateToast = () => {
+      if (document.getElementById('app-update-toast')) return;
+      const toast = document.createElement('div');
+      toast.id = 'app-update-toast';
+      toast.className = 'app-update-toast';
+      toast.innerHTML = '<span>Nova versao disponivel.</span><button type="button">Recarregar</button>';
+      toast.querySelector('button').addEventListener('click', () => location.reload());
+      document.body.appendChild(toast);
+    };
+    const shouldNotifyForSwVersion = (version, isUpdate) => {
+      if (!version) return !!isUpdate;
+      let previous = '';
+      try {
+        previous = localStorage.getItem(SW_VERSION_KEY) || '';
+        localStorage.setItem(SW_VERSION_KEY, version);
+      } catch {}
+      return !!isUpdate || (!!previous && previous !== version);
+    };
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const worker = reg.installing;
+          worker?.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdateToast();
+          });
+        });
+      }).catch(() => {});
+    });
+
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (
+        event.data?.type === 'POKEBUILD_SW_ACTIVATED' &&
+        navigator.serviceWorker.controller &&
+        shouldNotifyForSwVersion(event.data.version, event.data.isUpdate)
+      ) showUpdateToast();
+    });
   }
 </script>
 </body>

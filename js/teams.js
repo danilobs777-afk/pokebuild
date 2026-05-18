@@ -19,9 +19,43 @@ const TeamsView = (() => {
   let currentTeamId = null;
   let searchQuery = '';
 
+  function formatLabel(team) {
+    return GAME_VERSIONS.find(v => v.key === team.format)?.label || team.format || '-';
+  }
+
+  function dateLabel(ts) {
+    return ts ? new Date(ts).toLocaleDateString('pt-BR') : '-';
+  }
+
+  function memberCount(team) {
+    return (team.members || []).filter(m => m.name?.trim()).length;
+  }
+
+  function formatCountText(count) {
+    return `${count} ${count === 1 ? 'membro' : 'membros'}`;
+  }
+
+  function renderSummary(visible) {
+    const el = document.getElementById('mt-summary');
+    if (!el) return;
+    const total = teams.length;
+    const showing = visible.length;
+    const members = visible.reduce((sum, team) => sum + memberCount(team), 0);
+    el.textContent = searchQuery.trim()
+      ? `${showing} de ${total} times · ${members} Pokemon`
+      : `${total} ${total === 1 ? 'time salvo' : 'times salvos'} · ${members} Pokemon`;
+  }
+
+  function categoryLabel(category) {
+    if (category === 'physical') return 'Physical';
+    if (category === 'special') return 'Special';
+    return 'Status';
+  }
+
   // ── Gallery ───────────────────────────────────────────────────
   async function refresh() {
     teams = await TeamStorage.getTeams();
+    teams.sort((a, b) => (b.updated || b.created || 0) - (a.updated || a.created || 0));
     renderGallery();
   }
 
@@ -30,6 +64,7 @@ const TeamsView = (() => {
     if (!q) return teams;
     return teams.filter(team => {
       if (team.name?.toLowerCase().includes(q)) return true;
+      if (formatLabel(team).toLowerCase().includes(q)) return true;
       return (team.members || []).some(m => m.name?.toLowerCase().includes(q));
     });
   }
@@ -44,12 +79,15 @@ const TeamsView = (() => {
     empty.classList.add('hidden');
 
     const visible = filteredTeams();
+    renderSummary(visible);
 
     if (!visible.length) {
       gallery.innerHTML = '';
       empty.classList.remove('hidden');
       if (teams.length && searchQuery) {
         empty.innerHTML = `<p>Nenhum time encontrado para <strong>"${escHtml(searchQuery)}"</strong>.</p>`;
+      } else {
+        empty.innerHTML = '<p>Nenhum time salvo ainda.<br>Use o <strong>Team Builder</strong> para criar e salvar seu primeiro time!</p>';
       }
       return;
     }
@@ -57,42 +95,49 @@ const TeamsView = (() => {
 
     gallery.innerHTML = visible.map(team => {
       const members = team.members || [];
-      const spritePromises = members.slice(0, 6).map(m => m.name);
-      const format = GAME_VERSIONS.find(v => v.key === team.format)?.label || team.format || '—';
-      const date = team.created ? new Date(team.created).toLocaleDateString('pt-BR') : '';
+      const filled = members.filter(m => m.name?.trim());
+      const format = formatLabel(team);
+      const date = dateLabel(team.updated || team.created);
 
-      return `<div class="team-card-saved" data-id="${team.id}">
-        <div class="team-card-name">${escHtml(team.name)}</div>
-        <div class="team-card-format">${escHtml(format)} · ${date}</div>
+      return `<div class="team-card-saved" data-id="${team.id}" role="button" tabindex="0">
+        <div class="team-card-top">
+          <div>
+            <div class="team-card-name">${escHtml(team.name || 'Time sem nome')}</div>
+            <div class="team-card-format">${escHtml(format)} · Atualizado ${date}</div>
+          </div>
+          <span class="team-card-count">${formatCountText(filled.length)}</span>
+        </div>
         <div class="team-card-sprites" id="tcs-sprites-${team.id}">
-          ${members.slice(0, 6).map(m =>
+          ${filled.slice(0, 6).map((m, mi) =>
             `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
-              class="tc-sprite" data-name="${escHtml(m.name)}" alt="${escHtml(m.name)}" loading="lazy">`
+              class="tc-sprite" data-member="${mi}" alt="${escHtml(m.name)}" loading="lazy">`
           ).join('')}
         </div>
-        <div class="team-card-members">${members.map(m => escHtml(m.name)).join(', ')}</div>
+        <div class="team-card-members">${filled.map(m => `<span>${escHtml(m.name)}</span>`).join('')}</div>
       </div>`;
     }).join('');
 
     gallery.querySelectorAll('.team-card-saved').forEach(card => {
       card.addEventListener('click', () => openDetail(parseInt(card.dataset.id)));
+      card.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        openDetail(parseInt(card.dataset.id));
+      });
     });
 
     // Carrega sprites de forma assíncrona após renderizar o HTML
     visible.forEach(team => {
       const members = team.members || [];
-      members.slice(0, 6).forEach(m => {
+      members.filter(m => m.name?.trim()).slice(0, 6).forEach((m, mi) => {
         if (!m.name) return;
         const _res = spriteApiName(m.name);
         const applyGallery = data => {
           const wrap = document.getElementById(`tcs-sprites-${team.id}`);
           if (!wrap) return;
-          const img = wrap.querySelector(`[data-name="${m.name}"]`);
+          const img = wrap.querySelector(`[data-member="${mi}"]`);
           if (!img) return;
-          const sp = data.sprites;
-          img.src = m.shiny
-            ? (sp.front_shiny   || PokeAPI.spriteUrl(data.id, false, true))
-            : (sp.front_default || PokeAPI.spriteUrl(data.id, false, false));
+          img.src = PokeAPI.pixelSpriteUrl(data, !!m.shiny, m.gender === 'female');
         };
         PokeAPI.getPokemon(_res).then(applyGallery)
           .catch(() => _res !== m.name
@@ -116,17 +161,30 @@ const TeamsView = (() => {
     empty.classList.add('hidden');
     detail.classList.remove('hidden');
 
-    const format = GAME_VERSIONS.find(v => v.key === team.format)?.label || team.format || '—';
-    const date   = team.created ? new Date(team.created).toLocaleDateString('pt-BR') : '';
+    const format = formatLabel(team);
+    const date   = dateLabel(team.created);
+    const updated = team.updated && team.updated !== team.created ? ` · Atualizado ${dateLabel(team.updated)}` : '';
     const isChamp = team.isChampions || team.format === 'champions';
+    const count = memberCount(team);
 
     document.getElementById('mt-detail-header').innerHTML = `
-      <div class="detail-name">${escHtml(team.name)}</div>
-      <div class="detail-meta">${escHtml(format)} · Salvo em ${date}</div>
+      <div class="mt-detail-title-row">
+        <div>
+          <div class="detail-name" id="mt-detail-name">${escHtml(team.name || 'Time sem nome')}</div>
+          <div class="detail-meta">${escHtml(format)} · ${formatCountText(count)} · Salvo em ${date}${updated}</div>
+        </div>
+        <div id="mt-rename-form" class="mt-rename-form hidden">
+          <input type="text" id="mt-rename-input" class="text-input" value="${escHtml(team.name || '')}" autocomplete="off">
+          <button class="btn-secondary btn-sm" id="mt-rename-save" type="button">Salvar</button>
+          <button class="btn-secondary btn-sm" id="mt-rename-cancel" type="button">Cancelar</button>
+          <div id="mt-rename-status" class="mt-rename-status"></div>
+        </div>
+      </div>
     `;
 
-    const members = team.members || [];
+    const members = (team.members || []).filter(m => m.name?.trim());
     document.getElementById('mt-detail-builds').innerHTML = members.map((m, i) => buildCard(m, i, isChamp)).join('');
+    hydrateDetailMoveBadges();
 
     // Carrega sprites HD na view de detalhe
     members.forEach((m, i) => {
@@ -135,11 +193,8 @@ const TeamsView = (() => {
       const applyHD = data => {
         const wrap = document.getElementById(`mt-detail-sprite-${i}`);
         if (!wrap) return;
-        const oa  = data.sprites?.other?.['official-artwork'];
-        const src = m.shiny
-          ? (oa?.front_shiny    || data.sprites?.front_shiny    || PokeAPI.spriteUrl(data.id, true, true))
-          : (oa?.front_default  || PokeAPI.spriteUrl(data.id, true, false));
-        wrap.innerHTML = `<img src="${src}" class="build-sprite" alt="${m.name}">`;
+        const src = PokeAPI.officialArtworkUrl(data, !!m.shiny);
+        wrap.innerHTML = `<img src="${src}" class="build-sprite" alt="${escHtml(m.name)}">`;
       };
       PokeAPI.getPokemon(_resD).then(applyHD)
         .catch(() => _resD !== m.name
@@ -156,6 +211,10 @@ const TeamsView = (() => {
 
     const types = POKEMON_DB[m.name] || [];
     const typePills = types.filter(Boolean).map(t => `<span class="tpill t-${t}">${t}</span>`).join('');
+    const itemIcon = m.item
+      ? `<img class="mt-item-icon" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${PokeAPI.apiName(m.item)}.png" onerror="this.classList.add('hidden')" alt="">`
+      : '';
+    const evTotal = STAT_KEYS.reduce((sum, k) => sum + (m.evs?.[k] || 0), 0);
 
     const evBars = STAT_KEYS.map(k => {
       const val = m.evs?.[k] || 0;
@@ -174,6 +233,11 @@ const TeamsView = (() => {
       }</div>`;
 
     const moves = (m.moves || []).filter(mv => mv.trim());
+    const traits = [
+      m.gender === 'female' ? 'Female' : '',
+      m.shiny ? 'Shiny' : '',
+      m.name?.endsWith('-Gmax') ? 'Gigantamax' : ''
+    ].filter(Boolean);
 
     return `<div class="build-card">
       <div class="build-header">
@@ -181,23 +245,42 @@ const TeamsView = (() => {
         <div class="build-info">
           <div class="build-name">${escHtml(m.name)}</div>
           <div class="build-types">${typePills}</div>
-          ${m.item ? `<div class="build-item">@ ${escHtml(m.item)}</div>` : ''}
+          ${traits.length ? `<div class="mt-traits">${traits.map(t => `<span>${escHtml(t)}</span>`).join('')}</div>` : ''}
+          ${m.item ? `<div class="build-item">${itemIcon}@ ${escHtml(m.item)}</div>` : ''}
         </div>
       </div>
       <div class="build-fields">
         ${m.ability ? `<div class="build-field"><span class="build-field-label">Habilidade:</span> ${escHtml(m.ability)}</div>` : ''}
-        ${m.teraType ? `<div class="build-field"><span class="build-field-label">Tera Type:</span> <span class="tpill t-${escHtml(m.teraType)}" style="font-size:0.75em;padding:1px 7px">${escHtml(m.teraType)}</span></div>` : ''}
+        ${m.teraType ? `<div class="build-field"><span class="build-field-label">Tera Type:</span> <span class="tpill t-${escHtml(m.teraType)} mt-mini-pill">${escHtml(m.teraType)}</span></div>` : ''}
         ${m.nature ? `<div class="build-field"><span class="build-field-label">Nature:</span> ${escHtml(m.nature)}</div>` : ''}
         ${ivLine}
       </div>
       <div class="build-moves">
-        ${moves.map(mv => `<div class="build-move">— ${escHtml(mv)}</div>`).join('')}
+        ${moves.length ? moves.map(mv => `<div class="build-move" data-move="${escHtml(mv)}"><span class="mt-move-name">${escHtml(mv)}</span><span class="mt-move-badges"></span></div>`).join('') : '<div class="build-move muted">Sem moves</div>'}
       </div>
       <div class="build-ev-section">
-        <div class="build-field-label">${evLabel}s</div>
+        <div class="build-field-label">${evLabel}s · ${evTotal}</div>
         ${evBars}
       </div>
     </div>`;
+  }
+
+  function hydrateDetailMoveBadges() {
+    const moveEls = [...document.querySelectorAll('#mt-detail-builds .build-move[data-move]')];
+    const names = [...new Set(moveEls.map(el => el.dataset.move).filter(Boolean))];
+    if (!names.length) return;
+    PokeAPI.getMovesInfo(names).then(infoMap => {
+      moveEls.forEach(el => {
+        const info = infoMap[el.dataset.move];
+        if (!info) return;
+        const badgeEl = el.querySelector('.mt-move-badges');
+        if (!badgeEl) return;
+        badgeEl.innerHTML = `
+          <span class="tc t-${info.type} tc-dim">${info.type}</span>
+          <span class="tc tc-dim">${categoryLabel(info.category)}</span>
+        `;
+      });
+    }).catch(() => {});
   }
 
   /**
@@ -217,46 +300,48 @@ const TeamsView = (() => {
     TeamStorage.getTeam(currentTeamId).then(team => {
       if (!team) return;
       const isChamp = team.isChampions || team.format === 'champions';
-      const lines = [];
-      (team.members || []).forEach(m => {
-        if (isChamp) {
-          lines.push(`${m.name} @ ${m.item || '(sem item)'}`);
-          lines.push(`Ability: ${m.ability || '—'}`);
-          if (m.teraType) lines.push(`Tera Type: ${m.teraType}`);
-          lines.push(`Nature: ${m.nature}`);
-          lines.push(`SP Spread: ${STAT_KEYS.map(k => `${STAT_LABELS[k]} ${m.evs?.[k] || 0}`).join(' / ')}`);
-          (m.moves || []).filter(mv => mv).forEach(mv => lines.push(`- ${mv}`));
-        } else {
-          lines.push(`${m.name} @ ${m.item || '(sem item)'}`);
-          lines.push(`Ability: ${m.ability || '—'}`);
-          if (m.teraType) lines.push(`Tera Type: ${m.teraType}`);
-          lines.push(`Level: ${m.level || 50}`);
-          const evParts = STAT_KEYS.filter(k => (m.evs?.[k] || 0) > 0).map(k => `${m.evs[k]} ${STAT_LABELS[k]}`);
-          if (evParts.length) lines.push(`EVs: ${evParts.join(' / ')}`);
-          lines.push(`${m.nature} Nature`);
-          const ivParts = STAT_KEYS.filter(k => (m.ivs?.[k] ?? 31) !== 31).map(k => `${m.ivs[k]} ${STAT_LABELS[k]}`);
-          if (ivParts.length) lines.push(`IVs: ${ivParts.join(' / ')}`);
-          (m.moves || []).filter(mv => mv).forEach(mv => lines.push(`- ${mv}`));
-        }
-        lines.push('');
-      });
-      App.showExportModal(lines.join('\n'), team.name || 'time');
+      const gen = GAME_VERSIONS.find(v => v.key === team.format)?.gen ?? 9;
+      App.showExportModal(smogonTeamText(team.members || [], { isChampions: isChamp, gen }), team.name || 'time');
     });
   }
 
-  function renameCurrentTeam() {
+  function showRenameForm() {
+    const form = document.getElementById('mt-rename-form');
+    const input = document.getElementById('mt-rename-input');
+    const name = document.getElementById('mt-detail-name');
+    if (!form || !input) return;
+    form.classList.remove('hidden');
+    name?.classList.add('hidden');
+    input.focus();
+    input.select();
+  }
+
+  function hideRenameForm() {
+    document.getElementById('mt-rename-form')?.classList.add('hidden');
+    document.getElementById('mt-detail-name')?.classList.remove('hidden');
+    const status = document.getElementById('mt-rename-status');
+    if (status) status.textContent = '';
+  }
+
+  async function saveRename() {
     if (!currentTeamId) return;
-    TeamStorage.getTeam(currentTeamId).then(team => {
-      if (!team) return;
-      const newName = prompt('Novo nome do time:', team.name || '');
-      if (newName === null) return;
-      const trimmed = newName.trim();
-      if (!trimmed) return;
-      TeamStorage.updateTeam(currentTeamId, { name: trimmed }).then(() => {
-        refresh();
-        openDetail(currentTeamId);
-      });
-    });
+    const input = document.getElementById('mt-rename-input');
+    const status = document.getElementById('mt-rename-status');
+    const trimmed = input?.value.trim() || '';
+    if (!trimmed) {
+      if (status) status.textContent = 'Digite um nome.';
+      return;
+    }
+    const duplicate = teams.find(t =>
+      t.id !== currentTeamId && t.name?.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (duplicate) {
+      if (status) status.textContent = 'Ja existe um time com esse nome.';
+      return;
+    }
+    await TeamStorage.updateTeam(currentTeamId, { name: trimmed });
+    await refresh();
+    await openDetail(currentTeamId);
   }
 
   function deleteCurrentTeam() {
@@ -279,10 +364,21 @@ const TeamsView = (() => {
 
   function init() {
     document.getElementById('mt-back-btn').addEventListener('click', renderGallery);
-    document.getElementById('mt-detail-rename-btn').addEventListener('click', renameCurrentTeam);
+    document.getElementById('mt-detail-rename-btn').addEventListener('click', showRenameForm);
     document.getElementById('mt-detail-export-btn').addEventListener('click', exportCurrentTeam);
     document.getElementById('mt-detail-edit-btn').addEventListener('click', editInBuilder);
     document.getElementById('mt-detail-delete-btn').addEventListener('click', deleteCurrentTeam);
+
+    document.getElementById('mt-detail-header').addEventListener('click', e => {
+      if (e.target.closest('#mt-rename-save')) saveRename();
+      if (e.target.closest('#mt-rename-cancel')) hideRenameForm();
+    });
+
+    document.getElementById('mt-detail-header').addEventListener('keydown', e => {
+      if (e.target.id !== 'mt-rename-input') return;
+      if (e.key === 'Enter') saveRename();
+      if (e.key === 'Escape') hideRenameForm();
+    });
 
     const searchEl = document.getElementById('mt-search');
     if (searchEl) {

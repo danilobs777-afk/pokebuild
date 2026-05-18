@@ -14,6 +14,110 @@
  */
 
 const DmgCalc = (() => {
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+
+  function canonicalPokemonName(value) {
+    const raw = (value || '').trim();
+    if (!raw) return '';
+    if (POKEMON_DB[raw]) return raw;
+    const lower = raw.toLowerCase();
+    return Object.keys(POKEMON_DB).find(name => name.toLowerCase() === lower) || '';
+  }
+
+  function currentPokemonName(prefix) {
+    return canonicalPokemonName(document.getElementById(`${prefix}-name`)?.value);
+  }
+
+  function currentPokemonTypes(prefix) {
+    const name = currentPokemonName(prefix);
+    if (!name) return [];
+    const active = new Set(getActiveTypes());
+    return (POKEMON_DB[name] || []).filter(type => active.has(type));
+  }
+
+  function moveTypeLabel(move = cachedMove) {
+    const typeName = move?.type?.name;
+    return typeName ? typeName[0].toUpperCase() + typeName.slice(1) : '';
+  }
+
+  function effLabel(value) {
+    const n = Number(value);
+    if (n === 0.25) return '1/4x';
+    if (n === 0.5) return '1/2x';
+    return `${Number.isFinite(n) ? n : 1}x`;
+  }
+
+  function setValidation(kind, messages) {
+    const el = document.getElementById('dmg-validation');
+    if (!el) return;
+    const list = Array.isArray(messages) ? messages.filter(Boolean) : [messages].filter(Boolean);
+    if (!list.length) {
+      el.className = 'dmg-validation hidden';
+      el.innerHTML = '';
+      return;
+    }
+    el.className = `dmg-validation ${kind || 'info'}`;
+    el.innerHTML = list.map(msg => `<div>${esc(msg)}</div>`).join('');
+  }
+
+  function setPokemonStatus(prefix, kind, text) {
+    const el = document.getElementById(`${prefix}-stat-status`);
+    if (!el) return;
+    if (!text) {
+      el.className = 'dmg-stat-status hidden';
+      el.textContent = '';
+      return;
+    }
+    el.className = `dmg-stat-status ${kind || 'info'}`;
+    el.textContent = text;
+  }
+
+  function resetPokemonData(prefix) {
+    const bsWrap = document.getElementById(`${prefix}-base-stats`);
+    if (bsWrap) {
+      bsWrap.classList.add('hidden');
+      delete bsWrap.dataset.bs;
+      delete bsWrap.dataset.loadedName;
+    }
+    const spriteWrap = document.getElementById(`${prefix}-sprite`);
+    if (spriteWrap) spriteWrap.innerHTML = '';
+    setPokemonStatus(prefix, 'warning', 'Selecione no autocomplete para carregar stats reais.');
+    syncDerivedControls();
+  }
+
+  function syncDerivedControls() {
+    const notesEl = document.getElementById('dmg-auto-notes');
+    if (!cachedMove) {
+      if (notesEl) notesEl.textContent = '';
+      return;
+    }
+
+    const moveType = moveTypeLabel();
+    const notes = [];
+    const atkTypes = currentPokemonTypes('dmg-atk');
+    const defTypes = currentPokemonTypes('dmg-def');
+
+    if (moveType && atkTypes.length) {
+      const stab = atkTypes.includes(moveType);
+      const stabCheck = document.getElementById('dmg-stab');
+      if (stabCheck) stabCheck.checked = stab;
+      notes.push(`STAB ${stab ? 'sim' : 'nao'} (${atkTypes.join('/')})`);
+    }
+
+    if (moveType && defTypes.length) {
+      const eff = typeEff(moveType, defTypes);
+      const effSel = document.getElementById('dmg-eff');
+      if (effSel) effSel.value = String(eff);
+      notes.push(`Efetividade ${effLabel(eff)} vs ${defTypes.join('/')}`);
+    }
+
+    if (notesEl) notesEl.textContent = notes.length ? `Auto: ${notes.join(' · ')}` : '';
+  }
+
   // ── Mini build form (attacker / defender) ────────────────────
   function buildForm(prefix, label) {
     const natureOpts = Object.keys(NATURES).map(n => `<option value="${n}"${n==='Hardy'?' selected':''}>${n}</option>`).join('');
@@ -25,6 +129,7 @@ const DmgCalc = (() => {
           <ul class="suggestions hidden" id="${prefix}-sug"></ul>
         </div>
         <div id="${prefix}-sprite" style="margin-top:6px;"></div>
+        <div id="${prefix}-stat-status" class="dmg-stat-status hidden"></div>
       </div>
       <div id="${prefix}-base-stats" class="hidden">
         <div class="field-group">
@@ -129,6 +234,10 @@ const DmgCalc = (() => {
 
     inputEl.addEventListener('input', () => {
       clearTimeout(debounce);
+      const exactName = canonicalPokemonName(inputEl.value);
+      const loadedName = document.getElementById(`${prefix}-base-stats`)?.dataset.loadedName || '';
+      if (loadedName && loadedName !== exactName) resetPokemonData(prefix);
+      if (exactName) syncDerivedControls();
       debounce = setTimeout(() => {
         const q = inputEl.value.trim().toLowerCase();
         if (q.length < 2) { suggestEl.classList.add('hidden'); return; }
@@ -151,15 +260,10 @@ const DmgCalc = (() => {
       inputEl.value = name;
       suggestEl.classList.add('hidden');
       loadPokemonData(prefix, name);
-      if (prefix === 'dmg-atk' && cachedMove) {
-        const moveType = cachedMove.type?.name;
-        if (moveType) {
-          const capitalized = moveType[0].toUpperCase() + moveType.slice(1);
-          const stabCheck = document.getElementById('dmg-stab');
-          if (stabCheck) stabCheck.checked = (POKEMON_DB[name] || []).includes(capitalized);
-        }
-      }
+      syncDerivedControls();
     });
+
+    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
 
     document.addEventListener('click', e => {
       if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
@@ -226,6 +330,18 @@ const DmgCalc = (() => {
         icon.onerror = () => icon.classList.add('hidden');
       }
     });
+    bindAutocompleteKeys(inputEl, suggestEl, li => {
+      const value = li.dataset.value;
+      if (!value) return;
+      inputEl.value = value;
+      suggestEl.classList.add('hidden');
+      const icon = iconEl();
+      if (icon) {
+        icon.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${PokeAPI.apiName(value)}.png`;
+        icon.classList.remove('hidden');
+        icon.onerror = () => icon.classList.add('hidden');
+      }
+    });
 
     inputEl.addEventListener('blur', () => {
       setTimeout(() => suggestEl.classList.add('hidden'), 150);
@@ -275,6 +391,11 @@ const DmgCalc = (() => {
       inputEl.value = li.dataset.name;
       suggestEl.classList.add('hidden');
     });
+    bindAutocompleteKeys(inputEl, suggestEl, li => {
+      if (!li.dataset.name) return;
+      inputEl.value = li.dataset.name;
+      suggestEl.classList.add('hidden');
+    });
 
     inputEl.addEventListener('blur', () => {
       setTimeout(() => suggestEl.classList.add('hidden'), 150);
@@ -285,7 +406,7 @@ const DmgCalc = (() => {
     PokeAPI.getPokemon(name).then(data => {
       const spriteWrap = document.getElementById(`${prefix}-sprite`);
       if (spriteWrap)
-        spriteWrap.innerHTML = `<img src="${PokeAPI.spriteUrl(data.id)}" class="pkmn-sprite-sm" alt="${name}">`;
+        spriteWrap.innerHTML = `<img src="${PokeAPI.pixelSpriteUrl(data)}" class="pkmn-sprite-sm" alt="${name}">`;
 
       const statsRow = document.getElementById(`${prefix}-stats-row`);
       const bsWrap   = document.getElementById(`${prefix}-base-stats`);
@@ -295,6 +416,8 @@ const DmgCalc = (() => {
         data.stats.forEach(s => { const k = keyMap[s.stat.name]; if(k) bs[k]=s.base_stat; });
         bsWrap.classList.remove('hidden');
         bsWrap.dataset.bs = JSON.stringify(bs);
+        bsWrap.dataset.loadedName = name;
+        setPokemonStatus(prefix, 'success', 'Stats reais carregados.');
         renderStatsRow(prefix);
       }
 
@@ -308,18 +431,10 @@ const DmgCalc = (() => {
         }
       }
 
-      // Auto efetividade quando o defensor muda e já há golpe carregado
-      if (prefix === 'dmg-def' && cachedMove) {
-        const moveTypeName = cachedMove.type?.name;
-        if (moveTypeName) {
-          const mType = moveTypeName[0].toUpperCase() + moveTypeName.slice(1);
-          const defTypes = (POKEMON_DB[name] || []).filter(Boolean);
-          const eff = typeEff(mType, defTypes);
-          const effSel = document.getElementById('dmg-eff');
-          if (effSel) effSel.value = String(eff);
-        }
-      }
-    }).catch(() => {});
+      syncDerivedControls();
+    }).catch(() => {
+      setPokemonStatus(prefix, 'error', 'Nao foi possivel carregar stats pela PokeAPI.');
+    });
   }
 
   // ── Damage formula (Gen 5+, Lv50) ────────────────────────────
@@ -331,11 +446,11 @@ const DmgCalc = (() => {
    * @param {number} def - Stat de defesa do defensor
    * @param {number} power - Base power do golpe
    * @param {number} level - Nível do atacante
-   * @param {{stab, typeEff, crit, weather, burn}} mods - Modificadores
+   * @param {{stab, typeEff, crit, weather, burnAtkPenalty}} mods - Modificadores
    * @returns {number[]} 16 valores de dano, do mínimo ao máximo
    */
   function calcDamage(atk, def, power, level, mods) {
-    const { stab, typeEff, crit, weather, burn, critMult = 1.5 } = mods;
+    const { stab, typeEff, crit, weather, burnAtkPenalty, critMult = 1.5 } = mods;
     const base = Math.floor(
       Math.floor(
         Math.floor(2 * level / 5 + 2) * power * atk / def
@@ -348,7 +463,7 @@ const DmgCalc = (() => {
       if (crit) dmg = Math.floor(dmg * critMult);
       dmg = Math.floor(dmg * stab);
       dmg = Math.floor(dmg * typeEff);
-      if (burn) dmg = Math.floor(dmg * 0.5);
+      if (burnAtkPenalty) dmg = Math.floor(dmg * 0.5);
       rolls.push(dmg);
     }
     return rolls;
@@ -362,7 +477,7 @@ const DmgCalc = (() => {
     const iv       = isNaN(ivRaw) ? 31 : ivRaw;
     const nature   = document.getElementById(`${prefix}-nature`)?.value || 'Hardy';
     const level    = parseInt(document.getElementById(`${prefix}-level`)?.value) || 50;
-    const base     = baseStats?.[stat] || 80;
+    const base     = baseStats?.[stat] ?? 80;
     return calcStat(base, stat, ev, iv, nature, level);
   }
 
@@ -410,11 +525,12 @@ const DmgCalc = (() => {
     return cachedMove?.flags?.some(f => f.name === flag) ?? false;
   }
 
-  function applyAtkMods({ item, ability, moveType, moveCategory, movePower, typeEff, atkHpPct }) {
+  function applyAtkMods({ item, ability, moveType, moveCategory, movePower, moveName, typeEff, atkHpPct, burnAtkPenalty }) {
     let statMult  = 1;
     let powerMult = 1;
     let finalMult = 1;
     let stabAdaptability = false;
+    let ignoreBurnDrop = false;
     let critMult  = 1.5;
     const notes   = [];
 
@@ -429,6 +545,13 @@ const DmgCalc = (() => {
     // Habilidades de atacante
     switch (ability) {
       case 'Adaptability':   stabAdaptability = true; break;
+      case 'Guts':
+        if (burnAtkPenalty && moveCategory === 'physical') {
+          statMult *= 1.5;
+          ignoreBurnDrop = true;
+          notes.push('guts');
+        }
+        break;
       case 'Huge Power':
       case 'Pure Power':     if (moveCategory === 'physical') statMult *= 2; break;
       case 'Gorilla Tactics':
@@ -452,7 +575,12 @@ const DmgCalc = (() => {
       case 'Swarm':    if (moveType === 'Bug'   && atkHpPct <= 33) powerMult *= 1.5; break;
     }
 
-    return { statMult, powerMult, finalMult, stabAdaptability, critMult, notes };
+    if (moveName === 'facade' && burnAtkPenalty) {
+      powerMult *= 2;
+      notes.push('facade');
+    }
+
+    return { statMult, powerMult, finalMult, stabAdaptability, ignoreBurnDrop, critMult, notes };
   }
 
   function applyDefMods({ item, ability, moveType, moveCategory, typeEff, defHpPct }) {
@@ -530,6 +658,7 @@ const DmgCalc = (() => {
       suggestEl.classList.add('hidden');
       loadMove(li.dataset.name);
     });
+    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
 
     document.addEventListener('click', e => {
       if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
@@ -544,27 +673,15 @@ const DmgCalc = (() => {
       const capitalized = typeName[0].toUpperCase() + typeName.slice(1);
       document.getElementById('dmg-move-type-pill').textContent = capitalized;
       document.getElementById('dmg-move-type-pill').className = `tpill t-${capitalized}`;
-      document.getElementById('dmg-move-category').textContent = data.damage_class?.name || '';
+      const category = data.damage_class?.name || '';
+      document.getElementById('dmg-move-category').textContent = category ? category[0].toUpperCase() + category.slice(1) : '';
       document.getElementById('dmg-move-bp').textContent = data.power || '—';
       document.getElementById('dmg-move-info').classList.remove('hidden');
-
-      // Auto STAB
-      const atkName = document.getElementById('dmg-atk-name')?.value;
-      if (atkName && POKEMON_DB[atkName]) {
-        const stabCheck = document.getElementById('dmg-stab');
-        stabCheck.checked = POKEMON_DB[atkName].includes(capitalized);
-      }
-
-      // Auto efetividade se defensor já estiver selecionado
-      const defName = document.getElementById('dmg-def-name')?.value;
-      if (defName && POKEMON_DB[defName]) {
-        const defTypes = POKEMON_DB[defName].filter(Boolean);
-        const eff = typeEff(capitalized, defTypes);
-        const effSel = document.getElementById('dmg-eff');
-        if (effSel) effSel.value = String(eff);
-      }
+      setValidation('', []);
+      syncDerivedControls();
     }).catch(() => {
       document.getElementById('dmg-move-info').classList.add('hidden');
+      setValidation('error', 'Nao foi possivel carregar esse golpe pela PokeAPI.');
     });
   }
 
@@ -573,9 +690,21 @@ const DmgCalc = (() => {
     const atkBs = getBaseStats('dmg-atk');
     const defBs = getBaseStats('dmg-def');
     const level  = parseInt(document.getElementById('dmg-atk-level').value) || 50;
-    const power  = cachedMove ? (cachedMove.power || 0) : 80;
+    const warnings = [];
+    if (!cachedMove) {
+      setValidation('error', 'Selecione um golpe no autocomplete antes de calcular.');
+      return;
+    }
+    syncDerivedControls();
+    const power  = cachedMove.power || 0;
 
-    if (!power) { alert('Carregue um golpe com Base Power válido.'); return; }
+    if (!power) {
+      setValidation('error', 'Esse golpe nao tem Base Power calculavel. Escolha um golpe ofensivo.');
+      return;
+    }
+
+    if (!atkBs) warnings.push('Atacante sem stats reais carregados: usando base 80 como fallback.');
+    if (!defBs) warnings.push('Defensor sem stats reais carregados: usando base 80 como fallback.');
 
     const moveCategory = cachedMove?.damage_class?.name || 'physical';
     const isSpecial = moveCategory === 'special';
@@ -591,7 +720,8 @@ const DmgCalc = (() => {
     const typeEffRaw  = parseFloat(document.getElementById('dmg-eff').value);
     const typeEffMod  = isNaN(typeEffRaw) ? 1 : typeEffRaw;
     const crit        = document.getElementById('dmg-crit').checked;
-    const burn        = document.getElementById('dmg-burned').checked;
+    const burnAtkRaw  = document.getElementById('dmg-burn-atk')?.checked ?? false;
+    const atkBurnChip = document.getElementById('dmg-atk-burn-chip')?.checked ?? false;
     const trickRoom   = document.getElementById('dmg-trick-room')?.checked ?? false;
     const atkGrounded = document.getElementById('dmg-atk-grounded')?.checked ?? true;
     const defGrounded = document.getElementById('dmg-def-grounded')?.checked ?? true;
@@ -618,11 +748,22 @@ const DmgCalc = (() => {
     const effDefStage = crit ? Math.min(0, defOffStage) : defOffStage;
 
     // Modificadores de item / habilidade
-    const atkMods = applyAtkMods({ item: atkItem, ability: atkAbility, moveType, moveCategory, movePower: cachedMove?.power, typeEff: typeEffMod, atkHpPct });
+    const atkMods = applyAtkMods({ item: atkItem, ability: atkAbility, moveType, moveCategory, movePower: cachedMove?.power, moveName, typeEff: typeEffMod, atkHpPct, burnAtkPenalty: burnAtkRaw });
     const defMods = applyDefMods({ item: defItem, ability: defAbility, moveType, moveCategory, typeEff: typeEffMod, defHpPct });
+    const defTypes = currentPokemonTypes('dmg-def');
+    let defWeatherMult = 1;
+    const fieldNotes = [];
+    if (moveCategory === 'special' && weatherKey === 'sand' && defTypes.includes('Rock')) {
+      defWeatherMult *= 1.5;
+      fieldNotes.push('sand-spd');
+    }
+    if (moveCategory === 'special' && weatherKey === 'snow' && defTypes.includes('Ice')) {
+      defWeatherMult *= 1.5;
+      fieldNotes.push('snow-spd');
+    }
 
     const atkStatFinal = Math.floor(atkVal * stageMultiplier(effAtkStage) * atkMods.statMult);
-    const defStatFinal = Math.max(1, Math.floor(defVal * stageMultiplier(effDefStage) * defMods.statMult));
+    const defStatFinal = Math.max(1, Math.floor(defVal * stageMultiplier(effDefStage) * defMods.statMult * defWeatherMult));
     const powerFinal   = Math.floor(power * atkMods.powerMult);
 
     // STAB: Adaptability usa ×2 em vez de ×1.5
@@ -643,12 +784,13 @@ const DmgCalc = (() => {
     const atkSpeConditions = [atkTailwind && 'Tailwind', atkParalyzed && 'Paralisia'].filter(Boolean);
     const defSpeConditions = [defTailwind && 'Tailwind', defParalyzed && 'Paralisia'].filter(Boolean);
 
-    const burnChip = burn ? Math.floor(atkHp / 16) : 0;
+    const activeBurnDrop = burnAtkRaw && moveCategory === 'physical' && !atkMods.ignoreBurnDrop;
+    const burnChip = atkBurnChip ? Math.floor(atkHp / 16) : 0;
     const atkName  = document.getElementById('dmg-atk-name').value || 'Atacante';
     const defName  = document.getElementById('dmg-def-name').value || 'Defensor';
 
     let rolls = calcDamage(atkStatFinal, defStatFinal, powerFinal, level,
-      { stab, typeEff: typeEffMod, crit, weather, burn, critMult: atkMods.critMult });
+      { stab, typeEff: typeEffMod, crit, weather, burnAtkPenalty: activeBurnDrop, critMult: atkMods.critMult });
 
     // Multiplicadores finais (Life Orb, Filter, Multiscale, etc.)
     const finalMult = atkMods.finalMult * defMods.finalMult;
@@ -680,7 +822,14 @@ const DmgCalc = (() => {
     const defStatus      = document.getElementById('dmg-def-status')?.value || 'none';
     const defPassiveItem = document.getElementById('dmg-def-passive-item')?.value || 'none';
 
-    const extraNotes = atkMods.notes;
+    const extraNotes = [
+      ...atkMods.notes,
+      ...fieldNotes,
+      burnAtkRaw && moveCategory !== 'physical' ? 'burn-special' : '',
+      burnAtkRaw && atkMods.ignoreBurnDrop ? 'burn-ignored' : '',
+      activeBurnDrop ? 'burn-attack' : '',
+    ].filter(Boolean);
+    setValidation(warnings.length ? 'warning' : 'success', warnings.length ? warnings : 'Calculo pronto com dados carregados.');
     renderResults(rolls, defHp, {
       burnChip, atkHp, extraNotes, multiHitData,
       atkSpe: atkSpeFinal, defSpe: defSpeFinal,
@@ -750,6 +899,27 @@ const DmgCalc = (() => {
       if (extraNotes.includes('life-orb')) {
         const chip = Math.floor(atkHp / 10);
         notes.push(`Life Orb — atacante perde <strong>${chip} HP</strong> ao final do turno (1/10 de ${atkHp} HP)`);
+      }
+      if (extraNotes.includes('burn-attack')) {
+        notes.push('Burn ofensivo — dano fisico do atacante reduzido em 50%.');
+      }
+      if (extraNotes.includes('burn-special')) {
+        notes.push('Burn ofensivo marcado — golpes especiais nao sofrem reducao de dano.');
+      }
+      if (extraNotes.includes('burn-ignored')) {
+        notes.push('Guts — burn ofensivo ignorado e Atk fisico aumentado.');
+      }
+      if (extraNotes.includes('guts')) {
+        notes.push('Guts — atacante com status recebe boost de Atk fisico.');
+      }
+      if (extraNotes.includes('facade')) {
+        notes.push('Facade — Base Power dobrado por status do atacante.');
+      }
+      if (extraNotes.includes('sand-spd')) {
+        notes.push('Areia — defensor Rock recebe Sp.Def x1.5 contra golpe especial.');
+      }
+      if (extraNotes.includes('snow-spd')) {
+        notes.push('Neve — defensor Ice recebe Sp.Def x1.5 contra golpe especial.');
       }
       // End-of-turn do defensor
       if (defStatus && defStatus !== 'none') {
@@ -857,5 +1027,5 @@ const DmgCalc = (() => {
     document.getElementById('dmg-calc-btn').addEventListener('click', calculate);
   }
 
-  return { init };
+  return { init, rerender: syncDerivedControls };
 })();

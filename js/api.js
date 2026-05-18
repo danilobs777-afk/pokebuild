@@ -58,32 +58,49 @@ const PokeAPI = (() => {
       .replace(/♀/g, '-f').replace(/♂/g, '-m');
   }
 
+  function moveApiName(name) {
+    const slug = apiName(name);
+    if (!slug.includes('--') && /-(physical|special)$/.test(slug)) {
+      return slug.replace(/-(physical|special)$/, '--$1');
+    }
+    return slug;
+  }
+
   function spriteUrl(id, hd = false, shiny = false) {
     if (hd) return `${SPRITE_BASE}/other/official-artwork${shiny ? '/shiny' : ''}/${id}.png`;
     return `${SPRITE_BASE}${shiny ? '/shiny' : ''}/${id}.png`;
   }
 
   /**
-   * Retorna a URL do sprite adequada para a geração ativa da gen-bar.
-   * activeGen: 'gen1' | 'gen2to5' | 'gen6plus'
-   * Fallback automático para data.sprites.front_default se o sprite
-   * retro não existir (Pokémon introduzido após aquela geração).
+   * Imagens normalizadas, sem depender da geracao ativa.
+   * - officialArtworkUrl: prioriza a arte oficial para imagens grandes.
+   * - pixelSpriteUrl: prioriza sprites pixelados para UI compacta.
    */
-  function spriteForGen(data, activeGen) {
-    const v = data?.sprites?.versions;
-    const fallback = data?.sprites?.front_default || spriteUrl(data.id);
-    if (activeGen === 'gen1') {
-      return v?.['generation-i']?.['red-blue']?.front_default || fallback;
-    }
-    if (activeGen === 'gen2to5') {
-      return v?.['generation-v']?.['black-white']?.front_default
-          || v?.['generation-iv']?.['diamond-pearl']?.front_default
-          || v?.['generation-iii']?.['ruby-sapphire']?.front_default
-          || v?.['generation-ii']?.['gold']?.front_default
-          || fallback;
-    }
-    // gen6plus: official artwork
-    return `${SPRITE_BASE}/other/official-artwork/${data.id}.png`;
+  function officialArtworkUrl(dataOrId, shiny = false) {
+    const isData = dataOrId && typeof dataOrId === 'object';
+    const id = isData ? dataOrId.id : dataOrId;
+    const sp = isData ? dataOrId.sprites : null;
+    const oa = sp?.other?.['official-artwork'];
+    const home = sp?.other?.home;
+    const official = shiny ? oa?.front_shiny : oa?.front_default;
+    const modern = shiny ? home?.front_shiny : home?.front_default;
+    const fallback = shiny ? sp?.front_shiny : sp?.front_default;
+    return official || modern || fallback || (id ? spriteUrl(id, true, shiny) : '');
+  }
+
+  function pixelSpriteUrl(dataOrId, shiny = false, female = false) {
+    const isData = dataOrId && typeof dataOrId === 'object';
+    const id = isData ? dataOrId.id : dataOrId;
+    const sp = isData ? dataOrId.sprites : null;
+    const femaleSprite = female
+      ? (shiny ? sp?.front_shiny_female : sp?.front_female)
+      : '';
+    const fallback = shiny ? sp?.front_shiny : sp?.front_default;
+    return femaleSprite || fallback || (id ? spriteUrl(id, false, shiny) : '');
+  }
+
+  function spriteForGen(data) {
+    return officialArtworkUrl(data);
   }
 
   async function getPokemon(name) {
@@ -109,7 +126,12 @@ const PokeAPI = (() => {
   }
 
   async function getMove(name) {
-    return get('/move/' + apiName(name));
+    return get('/move/' + moveApiName(name));
+  }
+
+  function displayMoveName(slug) {
+    return String(slug || '').split('-').filter(Boolean)
+      .map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
   }
 
   // Retorna { type: 'Ground', status: false } — extraído da resposta completa já cacheada
@@ -118,8 +140,9 @@ const PokeAPI = (() => {
     try {
       const data = await getMove(name);
       const type = data.type.name.charAt(0).toUpperCase() + data.type.name.slice(1);
-      const status = data.damage_class.name === 'status';
-      return { type, status };
+      const category = data.damage_class.name;
+      const status = category === 'status';
+      return { type, category, status };
     } catch { return null; }
   }
 
@@ -135,32 +158,42 @@ const PokeAPI = (() => {
     return map;
   }
 
+  async function getMovesByType(typeName, category) {
+    const typeData = await get('/type/' + apiName(typeName));
+    let slugs = (typeData.moves || []).map(m => m.name).filter(Boolean);
+    if (category) {
+      const classData = await get('/move-damage-class/' + apiName(category));
+      const classMoves = new Set((classData.moves || []).map(m => m.name).filter(Boolean));
+      slugs = slugs.filter(name => classMoves.has(name));
+    }
+    return slugs.map(displayMoveName).sort();
+  }
+
   async function getNature(name) {
     return get('/nature/' + name.toLowerCase());
   }
 
   /**
-   * Mapeia cada version-group da PokéAPI para o número de geração.
-   * Usado para filtrar golpes aprendíveis (getLearnableMoves) e validar
-   * legalidade de moves no Builder (validatePokemonForVersion).
+   * Normaliza os version-groups usados pelo Builder para filtrar golpes
+   * por jogo/formato selecionado.
    */
-  // Mapeia cada version-group da PokéAPI para seu número de geração
-  const VG_GEN = {
-    'red-blue':1,'yellow':1,'red-green-japan':1,'blue-japan':1,
-    'gold-silver':2,'crystal':2,
-    'ruby-sapphire':3,'emerald':3,'firered-leafgreen':3,'colosseum':3,'xd':3,
-    'diamond-pearl':4,'platinum':4,'heartgold-soulsilver':4,
-    'black-white':5,'black-2-white-2':5,
-    'x-y':6,'omega-ruby-alpha-sapphire':6,
-    'sun-moon':7,'ultra-sun-ultra-moon':7,'lets-go-pikachu-lets-go-eevee':7,
-    'sword-shield':8,'the-isle-of-armor':8,'the-crown-tundra':8,
-    'brilliant-diamond-shining-pearl':8,'legends-arceus':8,
-    'scarlet-violet':9,'the-teal-mask':9,'the-indigo-disk':9,'legends-za':9,
-    'mega-dimension':9,'champions':9,
-  };
+  // Filtro atual: version-group exato (ou conjunto de version-groups da opcao do Builder).
+  function normalizeVersionGroups(versionGroupKey) {
+    if (!versionGroupKey) return null;
+    const groups = Array.isArray(versionGroupKey) ? versionGroupKey : [versionGroupKey];
+    const clean = [...new Set(groups.filter(Boolean))];
+    return clean.length ? clean : null;
+  }
+
+  function versionScopeLabel(versionGroups) {
+    const groups = normalizeVersionGroups(versionGroups);
+    if (!groups) return 'sem restricao de jogo';
+    return groups.map(g => g.split('-').filter(Boolean)
+      .map(w => w[0].toUpperCase() + w.slice(1)).join(' ')).join(' / ');
+  }
 
   // Valida golpes e habilidade de um Pokémon contra a versão de jogo selecionada
-  async function validatePokemonForVersion(pkName, moveNames, abilityName, versionGroupKey) {
+  async function validatePokemonForVersion(pkName, moveNames, abilityName, versionGroupKey, versionLabel) {
     const errors = [];
     let data;
     try {
@@ -182,19 +215,20 @@ const PokeAPI = (() => {
     // Valida golpes contra a versão de jogo
     for (const moveName of moveNames) {
       if (!moveName || !moveName.trim()) continue;
-      const moveSlug = apiName(moveName);
+      const moveSlug = moveApiName(moveName);
       const moveEntry = data.moves.find(m => m.move.name === moveSlug);
       if (!moveEntry) {
         errors.push(`Move "${moveName}" não pode ser aprendido por ${pkName}`);
         continue;
       }
-      if (versionGroupKey) {
-        const targetGen = VG_GEN[versionGroupKey] ?? 9;
+      const versionGroups = normalizeVersionGroups(versionGroupKey);
+      if (versionGroups) {
+        const allowed = new Set(versionGroups);
         const learnable = moveEntry.version_group_details.some(
-          vgd => (VG_GEN[vgd.version_group.name] ?? 99) <= targetGen
+          vgd => allowed.has(vgd.version_group.name)
         );
         if (!learnable) {
-          errors.push(`Move "${moveName}" não disponível até a geração ${targetGen} para ${pkName}`);
+          errors.push(`Move "${moveName}" nao disponivel em ${versionLabel || versionScopeLabel(versionGroups)} para ${pkName}`);
         }
       }
     }
@@ -214,22 +248,22 @@ const PokeAPI = (() => {
 
   /**
    * Retorna lista ordenada de nomes de golpes que pkName pode aprender
-   * até a geração correspondente ao versionGroupKey.
+   * nos version-groups informados.
    * Reutiliza o cache de getPokemon() — resposta é instantânea se o Pokémon
    * já foi carregado anteriormente (ex: ao buscar sprite/habilidades).
    * @param {string} pkName - Nome do Pokémon (formato exibição)
-   * @param {string|null} versionGroupKey - Chave de VG_GEN; null = sem restrição (gen 9)
+   * @param {string|string[]|null} versionGroupKey - version-group(s); null = sem restricao
    * @returns {Promise<string[]>} Nomes formatados em Title Case, ordenados
    */
   async function getLearnableMoves(pkName, versionGroupKey) {
     const data = await getPokemon(pkName);
-    const targetGen = versionGroupKey ? (VG_GEN[versionGroupKey] ?? 9) : 9;
+    const versionGroups = normalizeVersionGroups(versionGroupKey);
+    const allowed = versionGroups ? new Set(versionGroups) : null;
     return data.moves
-      .filter(m => m.version_group_details.some(
-        vgd => (VG_GEN[vgd.version_group.name] ?? 99) <= targetGen
+      .filter(m => !allowed || m.version_group_details.some(
+        vgd => allowed.has(vgd.version_group.name)
       ))
-      .map(m => m.move.name.split('-').filter(Boolean)
-        .map(w => w[0].toUpperCase() + w.slice(1)).join(' '))
+      .map(m => displayMoveName(m.move.name))
       .sort();
   }
 
@@ -260,9 +294,7 @@ const PokeAPI = (() => {
       clearTimeout(timer);
       if (!res.ok) throw new Error(`PokéAPI ${res.status}`);
       const data = await res.json();
-      const list = data.results.map(m =>
-        m.name.split('-').filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
-      );
+      const list = data.results.map(m => displayMoveName(m.name));
       cacheSet('__movelist__', list);
       return list;
     } catch (e) {
@@ -309,10 +341,10 @@ const PokeAPI = (() => {
   }
 
   return { getPokemon, getPokemonSpecies, loadPokemonList,
-           getMove, getMoveInfo, getMovesInfo, loadMoveList, ensureMoveList,
+           getMove, getMoveInfo, getMovesInfo, getMovesByType, loadMoveList, ensureMoveList,
            getLearnableMoves,
            loadAbilityList, ensureAbilityList,
            getNature, validatePokemonForVersion,
            getPokemonAbilities, getPokemonStats,
-           spriteUrl, spriteForGen, apiName };
+           spriteUrl, spriteForGen, officialArtworkUrl, pixelSpriteUrl, apiName };
 })();

@@ -200,14 +200,16 @@ const TYPE_COLORS = {
 
 /**
  * Versoes disponiveis no Builder para validacao de legalidade de moves.
- * key deve corresponder a uma entrada de VG_GEN em api.js.
+ * key deve corresponder ao version-group principal da PokeAPI.
  * O formato champions e tratado separadamente (sem restricao de geracao).
  */
 const GAME_VERSIONS = [
   { label: 'Pokémon Champions',              key: 'champions',                          gen: null },
-  { label: 'Scarlet / Violet',               key: 'scarlet-violet',                     gen: 9    },
-  { label: 'Sword / Shield',                 key: 'sword-shield',                       gen: 8    },
-  { label: 'Brilliant Diamond / Shining Pearl', key: 'brilliant-diamond-and-shining-pearl', gen: 8 },
+  { label: 'Scarlet / Violet',               key: 'scarlet-violet',                     gen: 9,
+    moveGroups: ['scarlet-violet', 'the-teal-mask', 'the-indigo-disk'] },
+  { label: 'Sword / Shield',                 key: 'sword-shield',                       gen: 8,
+    moveGroups: ['sword-shield', 'the-isle-of-armor', 'the-crown-tundra'] },
+  { label: 'Brilliant Diamond / Shining Pearl', key: 'brilliant-diamond-shining-pearl',  gen: 8    },
   { label: 'Sun / Moon',                     key: 'sun-moon',                           gen: 7    },
   { label: 'Ultra Sun / Ultra Moon',         key: 'ultra-sun-ultra-moon',               gen: 7    },
   { label: 'X / Y',                          key: 'x-y',                                gen: 6    },
@@ -215,12 +217,49 @@ const GAME_VERSIONS = [
   { label: 'Black / White',                  key: 'black-white',                        gen: 5    },
   { label: 'Black 2 / White 2',             key: 'black-2-white-2',                    gen: 5    },
   { label: 'HeartGold / SoulSilver',         key: 'heartgold-soulsilver',               gen: 4    },
-  { label: 'Diamond / Pearl / Platinum',     key: 'diamond-pearl',                      gen: 4    },
+  { label: 'Diamond / Pearl / Platinum',     key: 'diamond-pearl',                      gen: 4,
+    moveGroups: ['diamond-pearl', 'platinum'] },
   { label: 'FireRed / LeafGreen',            key: 'firered-leafgreen',                  gen: 3    },
-  { label: 'Ruby / Sapphire / Emerald',      key: 'ruby-sapphire',                      gen: 3    },
-  { label: 'Gold / Silver / Crystal',        key: 'gold-silver',                        gen: 2    },
-  { label: 'Red / Blue / Yellow',            key: 'red-blue',                           gen: 1    },
+  { label: 'Ruby / Sapphire / Emerald',      key: 'ruby-sapphire',                      gen: 3,
+    moveGroups: ['ruby-sapphire', 'emerald'] },
+  { label: 'Gold / Silver / Crystal',        key: 'gold-silver',                        gen: 2,
+    moveGroups: ['gold-silver', 'crystal'] },
+  { label: 'Red / Blue / Yellow',            key: 'red-blue',                           gen: 1,
+    moveGroups: ['red-blue', 'yellow'] },
 ];
+
+const GEN_GROUPS = {
+  gen1: [1],
+  gen2to5: [2, 3, 4, 5],
+  gen6plus: [6, 7, 8, 9],
+};
+
+function getGameVersionsForGen(gen = _activeGen) {
+  const allowed = GEN_GROUPS[gen] || GEN_GROUPS.gen6plus;
+  return GAME_VERSIONS.filter(v => v.key !== 'champions' && allowed.includes(v.gen));
+}
+
+function getDefaultGameVersionForGen(gen = _activeGen) {
+  return getGameVersionsForGen(gen)[0]?.key || 'scarlet-violet';
+}
+
+function isGameVersionAllowedForGen(key, gen = _activeGen) {
+  return getGameVersionsForGen(gen).some(v => v.key === key);
+}
+
+function getGenGroupForGameVersion(key) {
+  const version = GAME_VERSIONS.find(v => v.key === key);
+  if (!version || version.gen == null) return null;
+  if (version.gen === 1) return 'gen1';
+  if (version.gen <= 5) return 'gen2to5';
+  return 'gen6plus';
+}
+
+function getMoveVersionGroupsForGameVersion(key) {
+  const version = GAME_VERSIONS.find(v => v.key === key);
+  if (!version || version.key === 'champions') return null;
+  return version.moveGroups || [version.key];
+}
 
 // ── Itens competitivos ────────────────────────────────────────────────────────
 
@@ -611,6 +650,138 @@ function spriteApiName(name) {
   return FORM_API_NAMES[name] || name;
 }
 
+function lookupKey(value) {
+  return String(value || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, '')
+    .replace(/♀/g, 'f').replace(/♂/g, 'm')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function normalizePokemonName(raw) {
+  const text = String(raw || '').trim();
+  if (!text) return '';
+  if (POKEMON_DB[text]) return text;
+  const key = lookupKey(text);
+  return Object.keys(POKEMON_DB).find(name => lookupKey(name) === key) || text;
+}
+
+function cleanSmogonValue(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const key = text.toLowerCase();
+  return ['-', '—', 'none', '(none)', '(sem item)', '(sem habilidade)'].includes(key) ? '' : text;
+}
+
+function parseSmogonHeader(header) {
+  const [leftRaw, ...itemParts] = String(header || '').split('@');
+  let namePart = leftRaw.trim();
+  const item = cleanSmogonValue(itemParts.join('@'));
+  let species = '';
+  let nickname = '';
+  let gender = '';
+
+  let match;
+  while ((match = namePart.match(/\s*\(([^()]+)\)\s*$/))) {
+    const token = match[1].trim();
+    const lower = token.toLowerCase();
+    namePart = namePart.slice(0, match.index).trim();
+    if (lower === 'm' || lower === 'male') {
+      gender = 'male';
+      continue;
+    }
+    if (lower === 'f' || lower === 'female') {
+      gender = 'female';
+      continue;
+    }
+    species = token;
+    nickname = namePart;
+    break;
+  }
+
+  if (!species) species = namePart;
+  let normalizedSpecies = normalizePokemonName(species);
+  if (lookupKey(normalizedSpecies) === 'nidoran' && gender) {
+    normalizedSpecies = gender === 'female' ? 'Nidoran-F' : 'Nidoran-M';
+  }
+
+  return {
+    species: normalizedSpecies,
+    nickname,
+    item,
+    gender,
+  };
+}
+
+function parseStatSpread(str, defaultVal = 0, statMax) {
+  const result = { hp:defaultVal, atk:defaultVal, def:defaultVal, spa:defaultVal, spd:defaultVal, spe:defaultVal };
+  if (!str) return result;
+  const labelToKey = Object.fromEntries(STAT_KEYS.map(k => [STAT_LABELS[k].toLowerCase(), k]));
+  String(str).split(/[\/,]/).forEach(part => {
+    const m = part.trim().match(/^(\d+)\s*(HP|Atk|Def|SpA|SpD|Spe)$/i);
+    if (!m) return;
+    const key = labelToKey[m[2].toLowerCase()];
+    if (!key) return;
+    const val = parseInt(m[1], 10);
+    result[key] = statMax !== undefined ? Math.min(val, statMax) : val;
+  });
+  return result;
+}
+
+function normalizeNature(raw) {
+  const key = String(raw || '').trim();
+  return Object.keys(NATURES).find(n => n.toLowerCase() === key.toLowerCase()) || 'Hardy';
+}
+
+function smogonHeaderName(member) {
+  const rawName = member.name || '';
+  const isGmax = rawName.endsWith('-Gmax');
+  const name = isGmax ? (FORM_BASE[rawName] || rawName) : rawName;
+  if (member.gender === 'female') return `${name} (F)`;
+  return name;
+}
+
+function smogonMemberLines(member, opts = {}) {
+  const gen = opts.gen ?? 9;
+  const isChampions = !!opts.isChampions;
+  const lines = [];
+  const name = smogonHeaderName(member);
+  const item = cleanSmogonValue(member.item);
+  const isGmax = member.name?.endsWith('-Gmax');
+
+  if (gen >= 2 || isChampions) lines.push(item ? `${name} @ ${item}` : name);
+  else lines.push(name);
+
+  if ((gen >= 3 || isChampions) && cleanSmogonValue(member.ability)) {
+    lines.push(`Ability: ${cleanSmogonValue(member.ability)}`);
+  }
+  if (isGmax) lines.push('Gigantamax: Yes');
+  if (member.shiny) lines.push('Shiny: Yes');
+  if (member.teraType) lines.push(`Tera Type: ${member.teraType}`);
+  lines.push('Level: 50');
+
+  if (isChampions) {
+    lines.push(`SP Spread: ${STAT_KEYS.map(k => `${STAT_LABELS[k]} ${member.evs?.[k] || 0}`).join(' / ')}`);
+  } else {
+    const evParts = STAT_KEYS.filter(k => (member.evs?.[k] || 0) > 0).map(k => `${member.evs[k]} ${STAT_LABELS[k]}`);
+    if (evParts.length) lines.push(`EVs: ${evParts.join(' / ')}`);
+    if (gen >= 3) lines.push(`${normalizeNature(member.nature)} Nature`);
+    const ivParts = STAT_KEYS.filter(k => (member.ivs?.[k] ?? 31) !== 31).map(k => `${member.ivs[k]} ${STAT_LABELS[k]}`);
+    if (ivParts.length) lines.push(`IVs: ${ivParts.join(' / ')}`);
+  }
+
+  (member.moves || []).filter(Boolean).forEach(move => lines.push(`- ${move}`));
+  return lines;
+}
+
+function smogonTeamText(members, opts = {}) {
+  return (members || [])
+    .filter(member => member?.name?.trim())
+    .map(member => smogonMemberLines(member, opts).join('\n'))
+    .join('\n\n');
+}
+
 const REGIONAL_SUFFIXES = ['Alola', 'Galar', 'Hisui', 'Paldea'];
 function isRegionalForm(base, formName) {
   const suffix = formName.slice(base.length + 1);
@@ -647,3 +818,52 @@ function buildFormNavHTML(name, slotAttr) {
  * Comeca vazia — o autocomplete de golpes no Analyzer cai na API se vazia.
  */
 let MOVE_NAMES = [];
+
+function bindAutocompleteKeys(inputEl, suggestEl, onPick) {
+  if (!inputEl || !suggestEl || inputEl.dataset.acKeysBound === 'true') return;
+  inputEl.dataset.acKeysBound = 'true';
+  let activeIndex = -1;
+
+  const selectableItems = () => [...suggestEl.querySelectorAll('li')]
+    .filter(li => !li.classList.contains('sug-loading') && !li.classList.contains('sug-error'));
+
+  function setActive(index) {
+    const items = selectableItems();
+    if (!items.length) {
+      activeIndex = -1;
+      return;
+    }
+    activeIndex = (index + items.length) % items.length;
+    items.forEach((li, i) => {
+      const active = i === activeIndex;
+      li.classList.toggle('active', active);
+      li.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    items[activeIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  inputEl.addEventListener('keydown', e => {
+    if (suggestEl.classList.contains('hidden')) return;
+    const items = selectableItems();
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive(activeIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive(activeIndex - 1);
+    } else if (e.key === 'Enter') {
+      if (activeIndex < 0) return;
+      e.preventDefault();
+      onPick(items[activeIndex]);
+      activeIndex = -1;
+    } else if (e.key === 'Escape') {
+      suggestEl.classList.add('hidden');
+      activeIndex = -1;
+    }
+  });
+
+  inputEl.addEventListener('input', () => {
+    activeIndex = -1;
+  });
+}

@@ -8,7 +8,7 @@
  *
  * Antes de salvar, valida contra a PokéAPI:
  *   - Habilidade: deve ser possível para o Pokémon
- *   - Golpes: devem ser aprendíveis na geração do jogo selecionado
+ *   - Golpes: devem ser aprendiveis no jogo/formato selecionado
  *
  * Autocomplete de golpes filtra pela lista de moves do Pokémon selecionado
  * (via getLearnableMoves) ou pela lista completa se nenhum Pokémon estiver escolhido.
@@ -18,7 +18,7 @@
  *   - 3 membros (não 6)
  *   - EVs substituídos por SPs (max 32 cada, 66 total, sem divisão por 4)
  *   - IVs não configuráveis (sempre 31)
- *   - Sem restrição de geração nos golpes
+ *   - Sem restricao de jogo nos golpes
  *
  * Dependências: data.js (TYPES, NATURES, STAT_KEYS, STAT_LABELS, GAME_VERSIONS,
  *   ITEMS, TYPE_COLORS, calcStat),
@@ -30,6 +30,9 @@ const Builder = (() => {
   let slots = [];
   let isChampions = false;
   let editingTeamId = null; // ID do time sendo editado; null = novo time
+  const BUILDER_DRAFT_KEY = 'pokebuild_builder_draft_v1';
+  let dirty = false;
+  let draftTimer = null;
 
   function esc(s) {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -107,6 +110,25 @@ const Builder = (() => {
   function hasAbility() { return builderGen() >= 3; }
   function hasNature()  { return builderGen() >= 3; }
   function hasItem()    { return builderGen() >= 2; }
+
+  function populateFormatSelect(preferredKey) {
+    const formatSel = document.getElementById('bld-format');
+    if (!formatSel) return '';
+    const gen = (typeof App !== 'undefined' && App.getGen) ? App.getGen() : getActiveGen();
+    const versions = getGameVersionsForGen(gen);
+    const current = preferredKey || formatSel.value;
+    const next = versions.some(v => v.key === current) ? current : getDefaultGameVersionForGen(gen);
+    formatSel.innerHTML = versions.map(v => `<option value="${v.key}">${v.label}</option>`).join('');
+    formatSel.value = next;
+    return next;
+  }
+
+  function syncWithGlobalGen(preferredKey) {
+    const formatSel = document.getElementById('bld-format');
+    const before = formatSel?.value || '';
+    const next = populateFormatSelect(preferredKey || before);
+    if (before !== next) renderSlots();
+  }
 
   function buildSlotHTML(i) {
     const slot = slots[i];
@@ -254,6 +276,115 @@ const Builder = (() => {
     document.getElementById('bld-export-btn').disabled = !isComplete;
   }
 
+  function slotHasContent(slot) {
+    if (!slot) return false;
+    if ([slot.name, slot.item, slot.ability, slot.teraType].some(v => String(v || '').trim())) return true;
+    if ((slot.moves || []).some(v => String(v || '').trim())) return true;
+    if (slot.shiny || slot.gender === 'female') return true;
+    if (STAT_KEYS.some(k => (slot.evs?.[k] || 0) !== 0)) return true;
+    if (STAT_KEYS.some(k => (slot.ivs?.[k] ?? 31) !== 31)) return true;
+    return false;
+  }
+
+  function hasBuilderContent() {
+    const teamName = document.getElementById('bld-team-name')?.value.trim() || '';
+    return !!teamName || slots.some(slotHasContent);
+  }
+
+  function setDraftStatus(text, kind = 'info') {
+    const el = document.getElementById('bld-draft-status');
+    if (!el) return;
+    el.className = `bld-draft-status ${kind}`;
+    el.textContent = text || '';
+  }
+
+  function currentDraftPayload() {
+    return {
+      savedAt: Date.now(),
+      teamName: document.getElementById('bld-team-name')?.value || '',
+      format: document.getElementById('bld-format')?.value || '',
+      isChampions,
+      editingTeamId,
+      slots: slots.map(slot => ({ ...slot, moves: [...slot.moves], evs: { ...slot.evs }, ivs: { ...slot.ivs } }))
+    };
+  }
+
+  function clearBuilderDraft() {
+    localStorage.removeItem(BUILDER_DRAFT_KEY);
+    clearTimeout(draftTimer);
+    draftTimer = null;
+  }
+
+  function saveBuilderDraft() {
+    if (!hasBuilderContent()) {
+      clearBuilderDraft();
+      setDraftStatus('');
+      return;
+    }
+    try {
+      localStorage.setItem(BUILDER_DRAFT_KEY, JSON.stringify(currentDraftPayload()));
+      const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      setDraftStatus(`Rascunho salvo automaticamente ${time}`, 'saved');
+    } catch {
+      setDraftStatus('Nao foi possivel salvar o rascunho local.', 'error');
+    }
+  }
+
+  function markDirty() {
+    dirty = true;
+    setDraftStatus('Alteracoes ainda nao salvas no My Teams.', 'dirty');
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveBuilderDraft, 500);
+  }
+
+  function markClean(message = '') {
+    dirty = false;
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    setDraftStatus(message, message ? 'saved' : 'info');
+  }
+
+  function restoreBuilderDraft() {
+    const raw = localStorage.getItem(BUILDER_DRAFT_KEY);
+    if (!raw) return false;
+    try {
+      const draft = JSON.parse(raw);
+      if (!draft || !Array.isArray(draft.slots)) return false;
+      isChampions = !!draft.isChampions;
+      editingTeamId = draft.editingTeamId ?? null;
+
+      const champToggle = document.getElementById('bld-champions-toggle');
+      if (champToggle) {
+        champToggle.setAttribute('aria-pressed', isChampions);
+        champToggle.classList.toggle('active', isChampions);
+      }
+
+      if (draft.format && !isChampions) {
+        const targetGen = getGenGroupForGameVersion(draft.format);
+        if (targetGen && typeof App !== 'undefined' && App.getGen && App.getGen() !== targetGen) App.setGen(targetGen);
+        populateFormatSelect(draft.format);
+      }
+
+      const nameInput = document.getElementById('bld-team-name');
+      if (nameInput) nameInput.value = draft.teamName || '';
+
+      slots = Array.from({ length: SLOTS }, emptySlot);
+      draft.slots.slice(0, SLOTS).forEach((slot, i) => {
+        slots[i] = { ...emptySlot(), ...slot };
+        slots[i].moves = (slot.moves || []).concat(['', '', '', '']).slice(0, 4);
+        slots[i].evs = { ...emptySlot().evs, ...(slot.evs || {}) };
+        slots[i].ivs = { ...emptySlot().ivs, ...(slot.ivs || {}) };
+      });
+      renderSlots();
+      dirty = hasBuilderContent();
+      setDraftStatus('Rascunho local restaurado.', dirty ? 'dirty' : 'info');
+      return true;
+    } catch {
+      localStorage.removeItem(BUILDER_DRAFT_KEY);
+      return false;
+    }
+  }
+
   function refreshEvBar(i, stat) {
     const val = slots[i].evs[stat];
     const max = isChampions ? 32 : 252;
@@ -281,6 +412,15 @@ const Builder = (() => {
     refreshButtons();
   }
 
+  function bindBuilderGlobalListeners() {
+    if (document.body.dataset.builderGlobalListeners === 'true') return;
+    document.body.dataset.builderGlobalListeners = 'true';
+    document.addEventListener('click', e => {
+      if (e.target.closest('#view-builder .autocomplete-wrap')) return;
+      document.querySelectorAll('#view-builder .suggestions').forEach(el => el.classList.add('hidden'));
+    });
+  }
+
   function loadSprite(i, name, keepCurrent = false) {
     const phEl  = document.getElementById(`bld-sprite-ph-${i}`);
     const imgEl = document.getElementById(`bld-sprite-img-${i}`);
@@ -299,23 +439,7 @@ const Builder = (() => {
 
     function applySprite(data) {
       const sp = data.sprites;
-      let src;
-      if (useFemaleApi) {
-        src = slots[i].shiny
-          ? (sp.front_shiny   || PokeAPI.spriteUrl(data.id, false, true))
-          : (sp.front_default || PokeAPI.spriteUrl(data.id, false, false));
-      } else {
-        const hasFemaleSprite = gender === 'female' && !!(sp.front_female);
-        if (slots[i].shiny) {
-          src = (hasFemaleSprite && sp.front_shiny_female)
-            ? sp.front_shiny_female
-            : (sp.front_shiny || PokeAPI.spriteUrl(data.id, false, true));
-        } else {
-          src = (hasFemaleSprite && sp.front_female)
-            ? sp.front_female
-            : (sp.front_default || PokeAPI.spriteUrl(data.id, false, false));
-        }
-      }
+      const src = PokeAPI.pixelSpriteUrl(data, slots[i].shiny, gender === 'female');
       const shinyBtn = document.querySelector(`.bld-shiny-btn[data-slot="${i}"]`);
       if (shinyBtn) shinyBtn.classList.remove('hidden');
       refreshGenderControl(i, !!(femaleApi) || !!(sp.front_female));
@@ -438,6 +562,7 @@ const Builder = (() => {
         itemImg.classList.remove('hidden');
         itemImg.onerror = () => itemImg.classList.add('hidden');
       }
+      markDirty();
       // Auto-switch para Mega Evolução quando a Mega Stone corresponde ao Pokémon atual
       const megaForm = MEGA_STONE_MAP[value];
       if (megaForm) {
@@ -454,10 +579,8 @@ const Builder = (() => {
       }
     });
 
-    document.addEventListener('click', e => {
-      if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-        suggestEl.classList.add('hidden');
-    });
+    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
+
   }
 
   // ── Ability autocomplete ───────────────────────────────────────
@@ -528,12 +651,11 @@ const Builder = (() => {
       slots[i].ability = li.dataset.value;
       suggestEl.classList.add('hidden');
       if (hiddenTag) hiddenTag.classList.toggle('hidden', li.dataset.hidden !== 'true');
+      markDirty();
     });
 
-    document.addEventListener('click', e => {
-      if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-        suggestEl.classList.add('hidden');
-    });
+    bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
+
   }
 
   // ── Move autocomplete ─────────────────────────────────────────
@@ -546,23 +668,68 @@ const Builder = (() => {
       return matches.map(n => {
         const info = typesMap[n];
         const badge = info ? `<span class="tc t-${info.type} tc-dim">${info.type}</span>` : '';
-        return `<li data-name="${n}">${n} ${badge}</li>`;
+        const cat = info?.category ? `<span class="tc tc-dim">${categoryShort(info.category)}</span>` : '';
+        return `<li data-name="${n}">${n} ${badge} ${cat}</li>`;
       }).join('');
+    }
+
+    function categoryShort(category) {
+      if (category === 'physical') return 'Physical';
+      if (category === 'special') return 'Special';
+      return 'Status';
     }
 
     /**
      * Retorna Promise com a lista de golpes adequada para o slot atual:
-     * - Com Pokémon selecionado: getLearnableMoves (filtrado por Pokémon e geração)
+     * - Com Pokemon selecionado: getLearnableMoves (filtrado por Pokemon e jogo)
      * - Sem Pokémon: ensureMoveList (lista completa, ~900 golpes)
      * getLearnableMoves é praticamente instantâneo pois getPokemon() já está cacheado.
      */
     function getMoveSource() {
       const pkName = slots[i].name;
       if (pkName) {
-        const vgKey = isChampions ? null : document.getElementById('bld-format').value;
-        return PokeAPI.getLearnableMoves(pkName, vgKey);
+        const formatKey = document.getElementById('bld-format').value;
+        const vgKeys = isChampions ? null : getMoveVersionGroupsForGameVersion(formatKey);
+        return PokeAPI.getLearnableMoves(pkName, vgKeys);
       }
       return PokeAPI.ensureMoveList().then(list => { MOVE_NAMES = list; return list; });
+    }
+
+    function parseMoveFlagQuery(value) {
+      const raw = value.trim().toLowerCase();
+      if (!raw.startsWith(':')) return null;
+      if (raw === ':') return { pending: true };
+
+      const parts = raw.slice(1).split('::');
+      if (parts.length > 2 || parts.some(part => !part)) {
+        return { error: 'Use :ice ou :ice::physical' };
+      }
+
+      const type = TYPES.find(t => t.toLowerCase() === parts[0]);
+      if (!type) return { error: 'Tipo invalido. Ex: :ice' };
+
+      let category = '';
+      if (parts[1]) {
+        const categories = {
+          physical: 'physical',
+          special: 'special',
+          status: 'status',
+        };
+        category = categories[parts[1]];
+        if (!category) return { error: 'Categoria invalida. Use physical, special ou status.' };
+      }
+
+      return { type, category };
+    }
+
+    function getFlagMoveMatches(flags) {
+      const sourcePromise = slots[i].name ? getMoveSource() : Promise.resolve(null);
+      return Promise.all([sourcePromise, PokeAPI.getMovesByType(flags.type, flags.category)])
+        .then(([source, typedMoves]) => {
+          if (!source) return typedMoves.slice(0, 8);
+          const sourceSet = new Set(source);
+          return typedMoves.filter(name => sourceSet.has(name)).slice(0, 8);
+        });
     }
 
     // Pré-aquece o cache ao focar
@@ -572,11 +739,49 @@ const Builder = (() => {
 
     let debounce = null;
     moveInput.addEventListener('input', () => {
-      slots[i].moves[mi] = moveInput.value;
-      if (!moveInput.value.trim()) clearMoveTypeColor(moveInput);
+      const rawValue = moveInput.value.trim();
+      slots[i].moves[mi] = rawValue.startsWith(':') ? '' : moveInput.value;
+      if (!rawValue || rawValue.startsWith(':')) clearMoveTypeColor(moveInput);
       clearTimeout(debounce);
       debounce = setTimeout(() => {
-        const q = moveInput.value.trim().toLowerCase();
+        const currentRaw = moveInput.value.trim();
+        const flags = parseMoveFlagQuery(currentRaw);
+        if (flags) {
+          if (flags.pending) { moveSug.classList.add('hidden'); return; }
+          if (flags.error) {
+            moveSug.innerHTML = `<li class="sug-error">${esc(flags.error)}</li>`;
+            moveSug.classList.remove('hidden');
+            return;
+          }
+
+          moveSug.innerHTML = '<li class="sug-loading">Filtrando golpes...</li>';
+          moveSug.classList.remove('hidden');
+          getFlagMoveMatches(flags)
+            .then(matches => {
+              if (moveInput.value.trim() !== currentRaw) return;
+              if (!matches.length) {
+                moveSug.innerHTML = '<li class="sug-error">Nenhum golpe para esse filtro.</li>';
+                moveSug.classList.remove('hidden');
+                return;
+              }
+              moveSug.innerHTML = renderMoveItems(matches, {});
+              moveSug.classList.remove('hidden');
+              PokeAPI.getMovesInfo(matches)
+                .then(typesMap => {
+                  if (!moveSug.classList.contains('hidden') && moveInput.value.trim() === currentRaw)
+                    moveSug.innerHTML = renderMoveItems(matches, typesMap);
+                })
+                .catch(() => {});
+            })
+            .catch(err => {
+              console.error('[MoveFlag] falha ao filtrar:', err);
+              moveSug.innerHTML = `<li class="sug-error">Erro: ${err?.message || 'falha'}</li>`;
+              moveSug.classList.remove('hidden');
+            });
+          return;
+        }
+
+        const q = currentRaw.toLowerCase();
         if (q.length < 2) { moveSug.classList.add('hidden'); return; }
 
         // Loading só quando não há Pokémon selecionado (fetch pode demorar)
@@ -614,15 +819,14 @@ const Builder = (() => {
       moveInput.value = li.dataset.name;
       slots[i].moves[mi] = li.dataset.name;
       moveSug.classList.add('hidden');
+      markDirty();
       PokeAPI.getMoveInfo(li.dataset.name).then(info => {
         if (info) applyMoveTypeColor(moveInput, info.type);
       }).catch(() => {});
     });
 
-    document.addEventListener('click', e => {
-      if (!moveInput.contains(e.target) && !moveSug.contains(e.target))
-        moveSug.classList.add('hidden');
-    });
+    bindAutocompleteKeys(moveInput, moveSug, li => li.click());
+
   }
 
   // ── Attach all slot event listeners ───────────────────────────
@@ -676,11 +880,9 @@ const Builder = (() => {
             const teraSel = document.querySelector(`.bld-tera[data-slot="${i}"]`);
             if (teraSel) teraSel.value = type1;
           }
+          markDirty();
         });
-        document.addEventListener('click', e => {
-          if (!inputEl.contains(e.target) && !suggestEl.contains(e.target))
-            suggestEl.classList.add('hidden');
-        });
+        bindAutocompleteKeys(inputEl, suggestEl, li => li.click());
       }
 
       setupAbilityAutocomplete(i);
@@ -756,13 +958,17 @@ const Builder = (() => {
     });
 
     // Shiny e gender — event delegation para suportar botões inseridos dinamicamente
-    document.getElementById('bld-slots').addEventListener('click', e => {
+    const slotContainer = document.getElementById('bld-slots');
+    if (!slotContainer.dataset.delegateBound) {
+      slotContainer.dataset.delegateBound = 'true';
+      slotContainer.addEventListener('click', e => {
       const shinyBtn = e.target.closest('.bld-shiny-btn');
       if (shinyBtn) {
         const i = parseInt(shinyBtn.dataset.slot);
         slots[i].shiny = !slots[i].shiny;
         shinyBtn.classList.toggle('active', slots[i].shiny);
         if (slots[i].name) loadSprite(i, slots[i].name, true);
+        markDirty();
         return;
       }
       const genderBtn = e.target.closest('.bld-gender-btn');
@@ -774,6 +980,7 @@ const Builder = (() => {
           b.classList.toggle('active', b.dataset.gender === gender);
         });
         if (slots[i].name) loadSprite(i, slots[i].name, true);
+        markDirty();
         return;
       }
       const navBtn = e.target.closest('.form-nav-btn');
@@ -802,8 +1009,10 @@ const Builder = (() => {
         refreshShinyBtn(i);
         refreshGenderControl(i, false);
         loadSprite(i, formName, true);
+        markDirty();
       }
-    });
+      });
+    }
   }
 
   // ── Validation ────────────────────────────────────────────────
@@ -842,9 +1051,9 @@ const Builder = (() => {
 
       // Validação via PokéAPI (habilidade e golpes)
       const moveNames = slot.moves.filter(m => m.trim());
-      const vgKey = isChampions ? null : formatKey;
+      const vgKey = isChampions ? null : getMoveVersionGroupsForGameVersion(formatKey);
       const apiErrors = await PokeAPI.validatePokemonForVersion(
-        effectiveName(slot), moveNames, slot.ability, vgKey
+        effectiveName(slot), moveNames, slot.ability, vgKey, versionGroup?.label
       );
       slotErrors.push(...apiErrors);
 
@@ -885,12 +1094,14 @@ const Builder = (() => {
       if (editingTeamId !== null) {
         await TeamStorage.updateTeam(editingTeamId, teamData);
         editingTeamId = null;
-        valBox.innerHTML = '<div class="val-success">✓ Time atualizado com sucesso!</div>';
+        valBox.innerHTML = '<div class="val-success">✓ Time atualizado com sucesso! <button type="button" class="btn-secondary btn-sm" id="bld-open-teams-btn">Abrir My Teams</button></div>';
       } else {
         await TeamStorage.saveTeam(teamData);
-        valBox.innerHTML = '<div class="val-success">✓ Time salvo com sucesso!</div>';
+        valBox.innerHTML = '<div class="val-success">✓ Time salvo com sucesso! <button type="button" class="btn-secondary btn-sm" id="bld-open-teams-btn">Abrir My Teams</button></div>';
       }
-      setTimeout(() => valBox.classList.add('hidden'), 2500);
+      clearBuilderDraft();
+      markClean('Salvo no My Teams.');
+      document.getElementById('bld-open-teams-btn')?.addEventListener('click', () => App.navigate('my-teams'));
     } catch (err) {
       valBox.innerHTML = `<div class="val-error">Erro ao salvar: ${err.message}</div>`;
     }
@@ -898,41 +1109,10 @@ const Builder = (() => {
 
   // ── Export ────────────────────────────────────────────────────
   function exportText() {
-    const formatKey = document.getElementById('bld-format').value;
-    const lines = [];
-    slots.forEach(slot => {
-      if (!slot.name.trim()) return;
-      const isGmax = slot.name.endsWith('-Gmax');
-      const exportName = isGmax ? (FORM_BASE[slot.name] || slot.name) : slot.name;
-      if (isChampions) {
-        lines.push(`${exportName} @ ${slot.item || '(sem item)'}`);
-        lines.push(`Ability: ${slot.ability || '(sem habilidade)'}`);
-        if (isGmax) lines.push('Gigantamax: Yes');
-        if (slot.shiny) lines.push('Shiny: Yes');
-        if (slot.teraType) lines.push(`Tera Type: ${slot.teraType}`);
-        lines.push(`Nature: ${slot.nature}`);
-        lines.push(`SP Spread: ${STAT_KEYS.map(k => `${STAT_LABELS[k]} ${slot.evs[k]}`).join(' / ')}`);
-        slot.moves.filter(m => m).forEach(m => lines.push(`- ${m}`));
-      } else {
-        const g = builderGen();
-        lines.push(g >= 2 ? `${exportName} @ ${slot.item || '(sem item)'}` : exportName);
-        if (g >= 3) lines.push(`Ability: ${slot.ability || '(sem habilidade)'}`);
-        if (isGmax) lines.push('Gigantamax: Yes');
-        if (slot.shiny) lines.push('Shiny: Yes');
-        if (slot.teraType) lines.push(`Tera Type: ${slot.teraType}`);
-        lines.push(`Level: ${slot.level}`);
-        const evParts = STAT_KEYS.filter(k => slot.evs[k] > 0).map(k => `${slot.evs[k]} ${STAT_LABELS[k]}`);
-        if (evParts.length) lines.push(`EVs: ${evParts.join(' / ')}`);
-        if (g >= 3) lines.push(`${slot.nature} Nature`);
-        const ivParts = STAT_KEYS.filter(k => slot.ivs[k] !== 31).map(k => `${slot.ivs[k]} ${STAT_LABELS[k]}`);
-        if (ivParts.length) lines.push(`IVs: ${ivParts.join(' / ')}`);
-        slot.moves.filter(m => m).forEach(m => lines.push(`- ${m}`));
-      }
-      lines.push('');
-    });
-    if (!lines.length) { alert('Nenhum Pokémon configurado para exportar.'); return; }
-    const teamName = document.getElementById('bld-team-name').value.trim() || 'time';
-    App.showExportModal(lines.join('\n'), teamName);
+    const text = smogonTeamText(slots, { isChampions, gen: builderGen() });
+    if (!text) { alert('Nenhum Pokemon configurado para exportar.'); return; }
+    const exportTeamName = document.getElementById('bld-team-name').value.trim() || 'time';
+    App.showExportModal(text, exportTeamName);
   }
 
   // ── Saved teams list (modal do Builder) ───────────────────────
@@ -969,7 +1149,7 @@ const Builder = (() => {
           const wrap = document.getElementById(`bld-imp-spr-${team.id}`);
           if (!wrap) return;
           const img = wrap.querySelector(`[data-name="${m.name}"]`);
-          if (img) img.src = PokeAPI.spriteUrl(data.id);
+          if (img) img.src = PokeAPI.pixelSpriteUrl(data, !!m.shiny, m.gender === 'female');
         }).catch(() => {});
       });
     });
@@ -985,53 +1165,53 @@ const Builder = (() => {
 
   // ── Smogon import ─────────────────────────────────────────────
   function parseSmogonForBuilder(text) {
-    const STAT_MAP = { 'HP':'hp', 'Atk':'atk', 'Def':'def', 'SpA':'spa', 'SpD':'spd', 'Spe':'spe' };
-
-    function parseStatStr(str, defaultVal, statMax) {
-      const result = { hp:defaultVal, atk:defaultVal, def:defaultVal, spa:defaultVal, spd:defaultVal, spe:defaultVal };
-      if (!str) return result;
-      str.split('/').forEach(part => {
-        const m = part.trim().match(/^(\d+)\s+(\S+)$/);
-        if (!m) return;
-        const key = STAT_MAP[m[2]];
-        if (key) result[key] = statMax !== undefined ? Math.min(parseInt(m[1]), statMax) : parseInt(m[1]);
-      });
-      return result;
-    }
+    const normalizeType = raw => TYPES.find(t => t.toLowerCase() === String(raw || '').trim().toLowerCase()) || '';
 
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     const maxSlots = isChampions ? 3 : SLOTS;
     return text.trim().split(/\n[ \t]*\n/).filter(b => b.trim()).slice(0, maxSlots).map(block => {
       const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
       if (!lines.length) return null;
-      const header = lines[0];
-      const inParen = header.match(/\(([^)]+)\)/);
-      const rawName = inParen ? inParen[1].trim() : (header.split('@')[0]).trim();
-      const itemM = header.match(/@\s*(.+)$/);
-      const item = itemM ? itemM[1].trim() : '';
-      let ability = '', teraType = '', nature = 'Hardy', evsStr = '', ivsStr = '', shiny = false, gmax = false;
+      const header = parseSmogonHeader(lines[0]);
+      let ability = '', teraType = '', nature = 'Hardy', evsStr = '', ivsStr = '', spStr = '';
+      let shiny = false, gmax = false, gender = header.gender || 'male';
       const moves = [];
+
       for (let i = 1; i < lines.length; i++) {
         const l = lines[i];
-        if      (l.startsWith('Ability:'))    ability  = l.slice(8).trim();
-        else if (l.startsWith('Tera Type:'))  teraType = l.slice(10).trim();
-        else if (l.startsWith('Shiny:'))      shiny    = l.slice(6).trim().toLowerCase() === 'yes';
-        else if (l.startsWith('Gigantamax:')) gmax     = l.slice(11).trim().toLowerCase() === 'yes';
-        else if (l.startsWith('EVs:'))        evsStr   = l.slice(4).trim();
-        else if (l.startsWith('IVs:'))        ivsStr   = l.slice(4).trim();
-        else if (l.endsWith('Nature'))        nature   = l.split(' ')[0];
-        else if (l.startsWith('- ') && moves.length < 4) moves.push(l.slice(2).trim());
+        const moveLine = l.match(/^(?:-|•)\s*(.+)$/);
+        if (moveLine && moves.length < 4) {
+          moves.push(moveLine[1].trim());
+          continue;
+        }
+
+        const [rawKey, ...rest] = l.split(':');
+        const key = rawKey.trim().toLowerCase();
+        const value = cleanSmogonValue(rest.join(':'));
+        if      (key === 'ability')    ability  = value;
+        else if (key === 'tera type')  teraType = normalizeType(value);
+        else if (key === 'shiny')      shiny    = value.toLowerCase() === 'yes';
+        else if (key === 'gigantamax') gmax     = value.toLowerCase() === 'yes';
+        else if (key === 'gender')     gender   = value.toLowerCase().startsWith('f') ? 'female' : value.toLowerCase().startsWith('m') ? 'male' : gender;
+        else if (key === 'evs')        evsStr   = value;
+        else if (key === 'sp spread')  spStr    = value;
+        else if (key === 'ivs')        ivsStr   = value;
+        else if (key === 'nature')     nature   = value;
+        else if (/\s+nature$/i.test(l)) nature  = l.replace(/\s+nature$/i, '').trim();
       }
+
       return {
-        name: rawName,
-        item,
+        name: header.species,
+        item: header.item,
         ability,
         teraType,
         shiny,
         gmax,
-        nature: Object.keys(NATURES).includes(nature) ? nature : 'Hardy',
-        evs: parseStatStr(evsStr, 0, isChampions ? 32 : 252),
-        ivs: parseStatStr(ivsStr, 31, 31),
+        gender,
+        level: 50,
+        nature: normalizeNature(nature),
+        evs: parseStatSpread(isChampions ? (spStr || evsStr) : evsStr, 0, isChampions ? 32 : 252),
+        ivs: parseStatSpread(ivsStr, 31, 31),
         moves
       };
     }).filter(Boolean);
@@ -1047,16 +1227,56 @@ const Builder = (() => {
         if (POKEMON_DB[gmaxForm]) name = gmaxForm;
       }
       slots[i].name     = name;
-      slots[i].item     = p.item;
-      slots[i].ability  = p.ability;
+      slots[i].item     = cleanSmogonValue(p.item);
+      slots[i].ability  = cleanSmogonValue(p.ability);
       slots[i].teraType = p.teraType;
       slots[i].shiny    = p.shiny || false;
+      slots[i].gender   = p.gender || 'male';
+      slots[i].level    = 50;
       slots[i].nature   = p.nature;
       slots[i].evs      = p.evs;
       slots[i].ivs      = p.ivs;
       slots[i].moves    = p.moves.concat(['', '', '', '']).slice(0, 4);
     });
     renderSlots();
+    markDirty();
+    const unknown = parsed.map(p => p.name).filter(name => !POKEMON_DB[name]);
+    const valBox = document.getElementById('bld-validation-box');
+    if (valBox) {
+      valBox.innerHTML = unknown.length
+        ? `<div class="val-error">Importado com avisos: nao reconheci ${unknown.map(esc).join(', ')}. Ajuste antes de validar.</div>`
+        : '<div class="val-success">Importado com sucesso. Level foi normalizado para 50.</div>';
+      valBox.classList.remove('hidden');
+    }
+  }
+
+  function renderImportPreview() {
+    const previewEl = document.getElementById('bld-import-preview');
+    const text = document.getElementById('bld-smogon-text')?.value.trim() || '';
+    if (!previewEl) return;
+    if (!text) {
+      previewEl.classList.add('hidden');
+      previewEl.innerHTML = '';
+      return;
+    }
+    const parsed = parseSmogonForBuilder(text);
+    if (!parsed.length) {
+      previewEl.classList.remove('hidden');
+      previewEl.innerHTML = '<div class="import-preview-warning">Nenhum Pokemon reconhecido ainda.</div>';
+      return;
+    }
+    const unknown = parsed.map(p => p.name).filter(name => !POKEMON_DB[name]);
+    const rows = parsed.map((p, idx) => {
+      const moves = p.moves.filter(Boolean).length;
+      const status = POKEMON_DB[p.name] ? `${moves}/4 moves` : 'nao reconhecido';
+      return `<div class="import-preview-row"><strong>${idx + 1}. ${esc(p.name || '?')}</strong><span>${esc(status)}</span></div>`;
+    }).join('');
+    previewEl.classList.remove('hidden');
+    previewEl.innerHTML = `
+      <div class="import-preview-title">Preview: ${parsed.length} Pokemon${isChampions ? ' (Champions)' : ''}</div>
+      ${rows}
+      ${unknown.length ? `<div class="import-preview-warning">Ajustar depois: ${unknown.map(esc).join(', ')}</div>` : ''}
+    `;
   }
 
   function clearAll() {
@@ -1064,6 +1284,8 @@ const Builder = (() => {
     slots = Array.from({ length: SLOTS }, emptySlot);
     document.getElementById('bld-team-name').value = '';
     document.getElementById('bld-validation-box').classList.add('hidden');
+    clearBuilderDraft();
+    markClean('Rascunho limpo.');
     renderSlots();
   }
 
@@ -1083,13 +1305,17 @@ const Builder = (() => {
       });
       localStorage.removeItem('az_team_draft');
       renderSlots();
+      markDirty();
       return true;
     } catch { return false; }
   }
 
   function loadTeam(team, editMode = true) {
     editingTeamId = editMode ? team.id : null;
-    isChampions = !!(team.isChampions || team.format === 'champions');
+    const teamFormat = team.format === 'brilliant-diamond-and-shining-pearl'
+      ? 'brilliant-diamond-shining-pearl'
+      : team.format;
+    isChampions = !!(team.isChampions || teamFormat === 'champions');
 
     const champToggle = document.getElementById('bld-champions-toggle');
     if (champToggle) {
@@ -1098,7 +1324,13 @@ const Builder = (() => {
     }
 
     const formatSel = document.getElementById('bld-format');
-    if (formatSel && team.format && team.format !== 'champions') formatSel.value = team.format;
+    if (formatSel && teamFormat && teamFormat !== 'champions') {
+      const targetGen = getGenGroupForGameVersion(teamFormat);
+      if (targetGen && typeof App !== 'undefined' && App.getGen && App.getGen() !== targetGen) {
+        App.setGen(targetGen);
+      }
+      populateFormatSelect(teamFormat);
+    }
 
     const nameInput = document.getElementById('bld-team-name');
     if (nameInput) nameInput.value = team.name || '';
@@ -1119,19 +1351,20 @@ const Builder = (() => {
     } else if (valBox) {
       valBox.classList.add('hidden');
     }
+
+    if (editMode) markClean('Editando time salvo.');
+    else markDirty();
   }
 
   function init() {
     slots = Array.from({ length: SLOTS }, emptySlot);
+    bindBuilderGlobalListeners();
 
     // Preenche o select de formato (Champions excluído — gerenciado pelo toggle)
     const formatSel = document.getElementById('bld-format');
-    formatSel.innerHTML = GAME_VERSIONS
-      .filter(v => v.key !== 'champions')
-      .map(v => `<option value="${v.key}">${v.label}</option>`)
-      .join('');
+    populateFormatSelect();
 
-    formatSel.addEventListener('change', () => { renderSlots(); });
+    formatSel.addEventListener('change', () => { renderSlots(); markDirty(); });
 
     // Toggle do modo Champions
     const champToggle = document.getElementById('bld-champions-toggle');
@@ -1155,17 +1388,30 @@ const Builder = (() => {
         }
       });
       renderSlots();
+      markDirty();
     });
 
-    renderSlots();
+    const builderView = document.getElementById('view-builder');
+    const markFromUserEdit = e => {
+      if (e.target.closest('#bld-import-modal')) return;
+      markDirty();
+    };
+    builderView.addEventListener('input', markFromUserEdit);
+    builderView.addEventListener('change', markFromUserEdit);
+
+    if (!restoreBuilderDraft()) renderSlots();
 
     document.getElementById('bld-validate-btn').addEventListener('click', validateAndSave);
     document.getElementById('bld-export-btn').addEventListener('click', exportText);
-    document.getElementById('bld-clear-btn').addEventListener('click', clearAll);
+    document.getElementById('bld-clear-btn').addEventListener('click', () => {
+      if (dirty && hasBuilderContent()) App.showConfirm('Descartar alteracoes nao salvas do Builder?', clearAll);
+      else clearAll();
+    });
 
     document.getElementById('bld-import-btn').addEventListener('click', () => {
       document.getElementById('bld-smogon-text').value = '';
       document.getElementById('bld-smogon-file').value = '';
+      renderImportPreview();
       // Volta sempre para aba Smogon ao abrir
       document.querySelectorAll('.modal-tab-sm[data-bitab]').forEach(b => b.classList.remove('active'));
       document.querySelector('.modal-tab-sm[data-bitab="smogon"]').classList.add('active');
@@ -1203,10 +1449,20 @@ const Builder = (() => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = ev => { document.getElementById('bld-smogon-text').value = ev.target.result; };
+      reader.onload = ev => {
+        document.getElementById('bld-smogon-text').value = ev.target.result;
+        renderImportPreview();
+      };
       reader.readAsText(file);
+    });
+    document.getElementById('bld-smogon-text').addEventListener('input', renderImportPreview);
+
+    window.addEventListener('beforeunload', e => {
+      if (!dirty || !hasBuilderContent()) return;
+      e.preventDefault();
+      e.returnValue = '';
     });
   }
 
-  return { init, loadDraft, loadTeam, slots: () => slots, isChampions: () => isChampions };
+  return { init, loadDraft, loadTeam, syncWithGlobalGen, hasUnsavedChanges: () => dirty && hasBuilderContent(), slots: () => slots, isChampions: () => isChampions };
 })();
