@@ -10,8 +10,11 @@ O Damage Simulator usa um bundle local do `@smogon/calc` para reproduzir a formu
 - golpe, categoria, base power e casos especiais conhecidos pelo Smogon Calc;
 - itens, habilidades e modificadores de campo suportados pelo motor;
 - critico, burn ofensivo, weather, terrain, screens, Aurora Veil, Helping Hand, Friend Guard, Protect e Gravity;
+- estado avancado do campo: Magic Room, Wonder Room, auras, Aura Break, habilidades Ruin, Power Trick, Foresight, Flower Gift, Battery, Power Spot e Steely Spirit;
+- Max Move, Z-Move, primeiro uso Stellar, Dynamax, habilidade ativa, boosted stat e contadores relevantes;
+- hazards e efeitos residuais considerados na leitura de KO do motor: Stealth Rock, Spikes, G-Max Steelsurge, Vine Lash, Wildfire, Cannonade, Volcalith, Leech Seed e Salt Cure;
 - Tera Type ofensivo e defensivo;
-- rolls de dano, badges de 1HKO/2HKO/3HKO/Safe e notas de velocidade;
+- rolls de dano, badges de 1HKO/2HKO/3HKO/Safe, leitura contextual do Smogon Calc e notas de velocidade;
 - chip end-of-turn de burn, poison, toxic, Leftovers e Black Sludge.
 
 ## Fallback interno
@@ -28,7 +31,7 @@ Regras do fallback:
 
 - exige stats reais carregados para atacante e defensor;
 - nao usa base stat generico como substituto silencioso;
-- avisa quando controles avancados nao foram aplicados;
+- avisa quando controles avancados nao foram aplicados, incluindo hazards, Max/Z, Ruin, auras, Dynamax e estados de lado;
 - usa formula moderna simplificada, nao regras exatas por cartucho;
 - deve permanecer pequeno para nao virar um segundo motor competitivo paralelo.
 
@@ -46,6 +49,8 @@ Regras do fallback:
 - A gen-bar define o valor inicial do seletor de geracao do Damage Simulator, mas uma escolha manual do usuario e preservada.
 - "Burn ofensivo" afeta o atacante; chip de burn de fim de turno e uma opcao separada.
 - A efetividade manual existe apenas para o fallback interno. No motor Smogon, efetividade vem dos tipos, habilidades, itens e campo calculados pelo bundle.
+- As badges da UI continuam sendo a leitura rapida sobre os 16 rolls exibidos. A caixa "Linha Smogon / KO contextual" mostra a descricao do motor, incluindo hazards, recovery e recoil quando esses detalhes existem.
+- Quando o usuario ativa Max Move e Z-Move ao mesmo tempo, Max Move vence na traducao para o motor para evitar uma combinacao invalida.
 
 ## Ao adicionar regras novas
 

@@ -203,8 +203,16 @@ const SmogonDamage = (() => {
 
     if (side.ability) opts.ability = compactName(side.ability);
     if (side.item) opts.item = compactName(side.item);
-    if (side.status) opts.status = side.status;
+    if (side.status) opts.status = statusCode(side.status) || side.status;
     if (side.teraType) opts.teraType = typeName(side.teraType);
+    if (side.abilityOn) opts.abilityOn = true;
+    if (side.isDynamaxed) {
+      opts.isDynamaxed = true;
+      opts.dynamaxLevel = clamp(side.dynamaxLevel, 0, 10, 10);
+    }
+    if (side.alliesFainted) opts.alliesFainted = clamp(side.alliesFainted, 0, 5, 0);
+    if (side.boostedStat) opts.boostedStat = side.boostedStat;
+    if (side.toxicCounter) opts.toxicCounter = clamp(side.toxicCounter, 1, 15, 1);
 
     if (role === 'attacker' && side.isBurned) {
       opts.status = 'brn';
@@ -224,6 +232,11 @@ const SmogonDamage = (() => {
       attackerSide: {
         isHelpingHand: !!state.field?.helpingHand,
         isTailwind: !!state.attacker?.tailwind,
+        isBattery: !!state.field?.battery,
+        isPowerSpot: !!state.field?.powerSpot,
+        isFlowerGift: !!state.field?.flowerGiftAtk,
+        isSteelySpirit: !!state.field?.steelySpirit,
+        isPowerTrick: !!state.field?.powerTrickAtk,
       },
       defenderSide: {
         isReflect: !!state.field?.reflect,
@@ -232,6 +245,19 @@ const SmogonDamage = (() => {
         isFriendGuard: !!state.field?.friendGuard,
         isProtected: !!state.field?.protected,
         isTailwind: !!state.defender?.tailwind,
+        isForesight: !!state.field?.foresight,
+        isFlowerGift: !!state.field?.flowerGiftDef,
+        isPowerTrick: !!state.field?.powerTrickDef,
+        isSR: !!state.field?.stealthRock,
+        spikes: clamp(state.field?.spikes, 0, 3, 0),
+        steelsurge: !!state.field?.steelsurge,
+        vinelash: !!state.field?.vinelash,
+        wildfire: !!state.field?.wildfire,
+        cannonade: !!state.field?.cannonade,
+        volcalith: !!state.field?.volcalith,
+        isSeeded: !!state.field?.seeded,
+        isSaltCured: !!state.field?.saltCured,
+        isSwitching: ['out', 'in'].includes(state.field?.defenderSwitching) ? state.field.defenderSwitching : undefined,
       },
     };
 
@@ -242,6 +268,15 @@ const SmogonDamage = (() => {
     if (terrain) field.terrain = terrain;
 
     if (state.field?.gravity) field.isGravity = true;
+    if (state.field?.magicRoom) field.isMagicRoom = true;
+    if (state.field?.wonderRoom) field.isWonderRoom = true;
+    if (state.field?.auraBreak) field.isAuraBreak = true;
+    if (state.field?.fairyAura) field.isFairyAura = true;
+    if (state.field?.darkAura) field.isDarkAura = true;
+    if (state.field?.beadsRuin) field.isBeadsOfRuin = true;
+    if (state.field?.swordRuin) field.isSwordOfRuin = true;
+    if (state.field?.tabletsRuin) field.isTabletsOfRuin = true;
+    if (state.field?.vesselRuin) field.isVesselOfRuin = true;
 
     return field;
   }
@@ -273,15 +308,34 @@ const SmogonDamage = (() => {
     return numberOr(pokemon?.rawStats?.hp, 1);
   }
 
-  function moveOptions(state = {}) {
+  function moveOptions(state = {}, attackerName = '') {
     const opts = {
       isCrit: !!state.isCrit,
     };
 
     const hits = state.hits === 'auto' ? 0 : Number(state.hits);
     if (Number.isFinite(hits) && hits > 0) opts.hits = hits;
+    if (state.move?.useMax) opts.useMax = true;
+    else if (state.move?.useZ) opts.useZ = true;
+    if (state.move?.isStellarFirstUse) opts.isStellarFirstUse = true;
+    if (state.move?.timesUsed) opts.timesUsed = clamp(state.move.timesUsed, 1, 5, 1);
+    if (state.move?.timesUsedWithMetronome) {
+      opts.timesUsedWithMetronome = clamp(state.move.timesUsedWithMetronome, 0, 5, 0);
+    }
+    if (state.attacker?.ability) opts.ability = compactName(state.attacker.ability);
+    if (state.attacker?.item) opts.item = compactName(state.attacker.item);
+    if (attackerName) opts.species = attackerName;
 
     return opts;
+  }
+
+  function textResult(getter) {
+    try {
+      const value = getter();
+      return value?.text || '';
+    } catch {
+      return '';
+    }
   }
 
   function collectNotes(result, state) {
@@ -292,6 +346,15 @@ const SmogonDamage = (() => {
       notes.push('Telas defensivas aplicadas pelo motor de dano.');
     }
     if (state.field?.helpingHand) notes.push('Helping Hand aplicado.');
+    if (state.field?.stealthRock || state.field?.spikes || state.field?.steelsurge) {
+      notes.push('Entry hazards do defensor considerados na chance de KO.');
+    }
+    if (state.field?.vinelash || state.field?.wildfire || state.field?.cannonade || state.field?.volcalith) {
+      notes.push('Efeitos G-Max residuais considerados na chance de KO.');
+    }
+    if (state.move?.useZ) notes.push('Z-Move solicitado ao motor.');
+    if (state.move?.useMax) notes.push('Max Move solicitado ao motor.');
+    if (state.move?.isStellarFirstUse) notes.push('Primeiro uso Stellar informado ao motor.');
     if (state.attacker?.teraType) notes.push(`Tera ofensivo: ${titleCase(state.attacker.teraType)}.`);
     if (state.defender?.teraType) notes.push(`Tera defensivo: ${titleCase(state.defender.teraType)}.`);
     return notes;
@@ -304,11 +367,10 @@ const SmogonDamage = (() => {
     const genNumber = readGen(state);
     const gen = calc.Generations.get(genNumber);
     const moveName = resolveName(gen, 'moves', state.move?.name);
-    const move = new calc.Move(gen, moveName, moveOptions(state));
-    const moveCategory = move.category || state.move?.category || 'Physical';
-
     const attackerName = resolveName(gen, 'species', state.attacker?.name);
     const defenderName = resolveName(gen, 'species', state.defender?.name);
+    const move = new calc.Move(gen, moveName, moveOptions(state, attackerName));
+    const moveCategory = move.category || state.move?.category || 'Physical';
     const attacker = new calc.Pokemon(gen, attackerName, pokemonOptions(state.attacker, 'attacker', moveCategory));
     const defender = new calc.Pokemon(gen, defenderName, pokemonOptions(state.defender, 'defender', moveCategory));
 
@@ -335,6 +397,9 @@ const SmogonDamage = (() => {
       rolls,
       defHp: maxHp(defender),
       description: typeof result.fullDesc === 'function' ? result.fullDesc() : '',
+      koText: textResult(() => result.kochance(false)),
+      recoilText: textResult(() => result.recoil()),
+      recoveryText: textResult(() => result.recovery()),
       notes: collectNotes(result, state),
       rawDamage: result.damage,
       attacker,

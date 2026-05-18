@@ -524,6 +524,16 @@ const DmgCalc = (() => {
     return document.getElementById(id)?.checked ?? false;
   }
 
+  function readSelectValue(id, fallback = '') {
+    const value = document.getElementById(id)?.value;
+    return value == null || value === '' ? fallback : value;
+  }
+
+  function readClampedNumber(id, fallback, min, max) {
+    const value = readNumber(id, fallback);
+    return Math.min(max, Math.max(min, value));
+  }
+
   function readStatValues(prefix, group, fallback) {
     return STAT_KEYS.reduce((acc, stat) => {
       acc[stat] = readNumber(`${prefix}-${group}-${stat}`, fallback);
@@ -564,6 +574,12 @@ const DmgCalc = (() => {
       status,
       tailwind: readChecked(`${prefix}-tailwind`),
       isBurned: role === 'attacker' && readChecked('dmg-burn-atk'),
+      abilityOn: readChecked(role === 'attacker' ? 'dmg-atk-ability-on' : 'dmg-def-ability-on'),
+      isDynamaxed: readChecked(role === 'attacker' ? 'dmg-atk-dynamax' : 'dmg-def-dynamax'),
+      dynamaxLevel: readClampedNumber(role === 'attacker' ? 'dmg-atk-dynamax-level' : 'dmg-def-dynamax-level', 10, 0, 10),
+      boostedStat: readSelectValue(role === 'attacker' ? 'dmg-atk-boosted-stat' : 'dmg-def-boosted-stat'),
+      alliesFainted: role === 'attacker' ? readClampedNumber('dmg-allies-fainted', 0, 0, 5) : 0,
+      toxicCounter: role === 'defender' ? readClampedNumber('dmg-toxic-counter', 1, 1, 15) : 1,
     };
   }
 
@@ -578,6 +594,11 @@ const DmgCalc = (() => {
         type: cachedMove?.type?.name || '',
         category: cachedMove?.damage_class?.name || '',
         power: cachedMove?.power || 0,
+        useZ: readChecked('dmg-use-z') && !readChecked('dmg-use-max'),
+        useMax: readChecked('dmg-use-max'),
+        isStellarFirstUse: readChecked('dmg-stellar-first'),
+        timesUsed: readClampedNumber('dmg-move-times-used', 1, 1, 5),
+        timesUsedWithMetronome: readClampedNumber('dmg-metronome-turns', 0, 0, 5),
       },
       weather: document.getElementById('dmg-weather')?.value || 'none',
       terrain: document.getElementById('dmg-terrain')?.value || 'none',
@@ -591,6 +612,33 @@ const DmgCalc = (() => {
         friendGuard: readChecked('dmg-friend-guard'),
         protected: readChecked('dmg-protected'),
         gravity: readChecked('dmg-gravity'),
+        magicRoom: readChecked('dmg-magic-room'),
+        wonderRoom: readChecked('dmg-wonder-room'),
+        fairyAura: readChecked('dmg-fairy-aura'),
+        darkAura: readChecked('dmg-dark-aura'),
+        auraBreak: readChecked('dmg-aura-break'),
+        beadsRuin: readChecked('dmg-beads-ruin'),
+        swordRuin: readChecked('dmg-sword-ruin'),
+        tabletsRuin: readChecked('dmg-tablets-ruin'),
+        vesselRuin: readChecked('dmg-vessel-ruin'),
+        battery: readChecked('dmg-battery'),
+        powerSpot: readChecked('dmg-power-spot'),
+        flowerGiftAtk: readChecked('dmg-flower-gift-atk'),
+        steelySpirit: readChecked('dmg-steely-spirit'),
+        foresight: readChecked('dmg-foresight'),
+        flowerGiftDef: readChecked('dmg-flower-gift-def'),
+        stealthRock: readChecked('dmg-stealth-rock'),
+        steelsurge: readChecked('dmg-steelsurge'),
+        vinelash: readChecked('dmg-vinelash'),
+        wildfire: readChecked('dmg-wildfire'),
+        cannonade: readChecked('dmg-cannonade'),
+        volcalith: readChecked('dmg-volcalith'),
+        seeded: readChecked('dmg-seeded'),
+        saltCured: readChecked('dmg-salt-cured'),
+        spikes: readClampedNumber('dmg-spikes', 0, 0, 3),
+        powerTrickAtk: readChecked('dmg-atk-power-trick'),
+        powerTrickDef: readChecked('dmg-def-power-trick'),
+        defenderSwitching: readSelectValue('dmg-def-switching'),
       },
       engineLabel: 'Motor Smogon Calc local aplicado.',
     };
@@ -602,17 +650,63 @@ const DmgCalc = (() => {
     const selectedGen = readNumber('dmg-calc-gen', defaultCalcGen());
     const forcedHits = document.getElementById('dmg-hit-count')?.value || 'auto';
 
+    const ignoredCheckboxes = [
+      ['dmg-reflect', 'Reflect'],
+      ['dmg-light-screen', 'Light Screen'],
+      ['dmg-aurora-veil', 'Aurora Veil'],
+      ['dmg-helping-hand', 'Helping Hand'],
+      ['dmg-friend-guard', 'Friend Guard'],
+      ['dmg-protected', 'Protect'],
+      ['dmg-gravity', 'Gravity'],
+      ['dmg-magic-room', 'Magic Room'],
+      ['dmg-wonder-room', 'Wonder Room'],
+      ['dmg-fairy-aura', 'Fairy Aura'],
+      ['dmg-dark-aura', 'Dark Aura'],
+      ['dmg-aura-break', 'Aura Break'],
+      ['dmg-beads-ruin', 'Beads of Ruin'],
+      ['dmg-sword-ruin', 'Sword of Ruin'],
+      ['dmg-tablets-ruin', 'Tablets of Ruin'],
+      ['dmg-vessel-ruin', 'Vessel of Ruin'],
+      ['dmg-battery', 'Battery'],
+      ['dmg-power-spot', 'Power Spot'],
+      ['dmg-flower-gift-atk', 'Flower Gift atacante'],
+      ['dmg-steely-spirit', 'Steely Spirit'],
+      ['dmg-foresight', 'Foresight'],
+      ['dmg-flower-gift-def', 'Flower Gift defensor'],
+      ['dmg-stealth-rock', 'Stealth Rock'],
+      ['dmg-steelsurge', 'G-Max Steelsurge'],
+      ['dmg-vinelash', 'G-Max Vine Lash'],
+      ['dmg-wildfire', 'G-Max Wildfire'],
+      ['dmg-cannonade', 'G-Max Cannonade'],
+      ['dmg-volcalith', 'G-Max Volcalith'],
+      ['dmg-seeded', 'Leech Seed'],
+      ['dmg-salt-cured', 'Salt Cure'],
+      ['dmg-use-z', 'Z-Move'],
+      ['dmg-use-max', 'Max Move'],
+      ['dmg-stellar-first', 'Stellar'],
+      ['dmg-atk-dynamax', 'Dynamax atacante'],
+      ['dmg-def-dynamax', 'Dynamax defensor'],
+      ['dmg-atk-ability-on', 'habilidade ativa Atk'],
+      ['dmg-def-ability-on', 'habilidade ativa Def'],
+      ['dmg-atk-power-trick', 'Power Trick Atk'],
+      ['dmg-def-power-trick', 'Power Trick Def'],
+    ];
+
     if (selectedGen !== 9) ignored.push('geracao exata');
     if (gameType === 'Doubles') ignored.push('Doubles e spread damage');
-    if (readChecked('dmg-reflect') || readChecked('dmg-light-screen') || readChecked('dmg-aurora-veil')) {
-      ignored.push('Reflect, Light Screen e Aurora Veil');
-    }
-    if (readChecked('dmg-helping-hand')) ignored.push('Helping Hand');
-    if (readChecked('dmg-friend-guard')) ignored.push('Friend Guard');
-    if (readChecked('dmg-protected')) ignored.push('Protect');
-    if (readChecked('dmg-gravity')) ignored.push('Gravity');
+    ignoredCheckboxes.forEach(([id, label]) => {
+      if (readChecked(id)) ignored.push(label);
+    });
     if (teraValue('dmg-atk') || teraValue('dmg-def')) ignored.push('Tera Type');
     if (forcedHits !== 'auto') ignored.push('multi-hit forcado');
+    if (readClampedNumber('dmg-spikes', 0, 0, 3) > 0) ignored.push('Spikes');
+    if (readSelectValue('dmg-atk-boosted-stat')) ignored.push('boosted stat Atk');
+    if (readSelectValue('dmg-def-boosted-stat')) ignored.push('boosted stat Def');
+    if (readClampedNumber('dmg-allies-fainted', 0, 0, 5) > 0) ignored.push('aliados caidos');
+    if (readClampedNumber('dmg-move-times-used', 1, 1, 5) > 1) ignored.push('turnos do golpe');
+    if (readClampedNumber('dmg-metronome-turns', 0, 0, 5) > 0) ignored.push('Metronome');
+    if (readClampedNumber('dmg-toxic-counter', 1, 1, 15) > 1) ignored.push('toxic counter exato');
+    if (readSelectValue('dmg-def-switching')) ignored.push('switch do defensor');
     if (
       readChecked('dmg-atk-tailwind') ||
       readChecked('dmg-def-tailwind') ||
@@ -909,7 +1003,7 @@ const DmgCalc = (() => {
 
     let usedSmogonEngine = false;
     let smogonEngineNotes = [];
-    let smogonDescription = '';
+    let smogonEngineDetail = {};
     let resultDefHp = defHp;
     let rolls;
 
@@ -919,7 +1013,12 @@ const DmgCalc = (() => {
         rolls = smogonResult.rolls.map(r => Math.max(0, Math.floor(r)));
         resultDefHp = Math.max(1, Math.floor(smogonResult.defHp || defHp));
         smogonEngineNotes = smogonResult.notes || [];
-        smogonDescription = smogonResult.description || '';
+        smogonEngineDetail = {
+          description: smogonResult.description || '',
+          koText: smogonResult.koText || '',
+          recoilText: smogonResult.recoilText || '',
+          recoveryText: smogonResult.recoveryText || '',
+        };
         usedSmogonEngine = true;
       } catch (err) {
         warnings.push(`Motor Smogon local nao conseguiu calcular (${err.message}). Tentando fallback interno simplificado.`);
@@ -993,12 +1092,34 @@ const DmgCalc = (() => {
     renderResults(rolls, resultDefHp, {
       burnChip, atkHp, extraNotes, multiHitData,
       engineNotes: smogonEngineNotes,
-      engineDescription: smogonDescription,
+      engineDetail: smogonEngineDetail,
       atkSpe: atkSpeFinal, defSpe: defSpeFinal,
       atkSpeConditions, defSpeConditions,
       trickRoom, atkName, defName,
       defStatus, defPassiveItem,
     });
+  }
+
+  function renderEngineDetail(detail = {}) {
+    const detailEl = document.getElementById('dmg-engine-detail');
+    if (!detailEl) return;
+
+    const rows = [];
+    const seen = new Set();
+    [
+      ['Linha Smogon', detail.description],
+      ['KO contextual', detail.koText],
+      ['Recoil', detail.recoilText],
+      ['Recovery', detail.recoveryText],
+    ].forEach(([label, value]) => {
+      const text = String(value || '').trim();
+      if (!text || seen.has(text)) return;
+      seen.add(text);
+      rows.push(`<div><strong>${esc(label)}:</strong> ${esc(text)}</div>`);
+    });
+
+    detailEl.classList.toggle('hidden', !rows.length);
+    detailEl.innerHTML = rows.length ? rows.join('') : '';
   }
 
   function renderResults(rolls, defHp, endOfTurn = {}) {
@@ -1048,6 +1169,7 @@ const DmgCalc = (() => {
     if (!badges.length) badges.push(`<span class="dmg-ko-badge badge-no">Sem KO</span>`);
 
     document.getElementById('dmg-ko-badges').innerHTML = badges.join('');
+    renderEngineDetail(endOfTurn.engineDetail);
     document.getElementById('dmg-summary').textContent =
       `Atk: ${document.getElementById('dmg-atk-name').value || '?'} vs Def: ${document.getElementById('dmg-def-name').value || '?'} · Power ${cachedMove?.power || '?'} · ${cachedMove?.damage_class?.name || '?'}`;
 
@@ -1057,7 +1179,7 @@ const DmgCalc = (() => {
         burnChip, atkHp, atkSpe, defSpe,
         atkSpeConditions = [], defSpeConditions = [],
         trickRoom, atkName, defName,
-        extraNotes = [], engineNotes = [], engineDescription = '',
+        extraNotes = [], engineNotes = [],
         multiHitData, defStatus, defPassiveItem
       } = endOfTurn;
       const notes = [];
@@ -1068,7 +1190,6 @@ const DmgCalc = (() => {
         notes.push('Fallback interno simplificado — estimativa de emergencia com formula moderna basica; nao replica todos os detalhes do jogo.');
       }
       engineNotes.filter(Boolean).forEach(note => notes.push(esc(note)));
-      if (engineDescription) notes.push(esc(engineDescription));
       if (burnChip) {
         notes.push(`Queimado — atacante perde <strong>${burnChip} HP</strong> ao final do turno (1/16 de ${atkHp} HP)`);
       }

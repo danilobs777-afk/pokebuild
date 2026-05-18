@@ -140,8 +140,11 @@ async function runSmoke() {
     click('#dmg-calc-btn');
     await waitFor(() => (document.querySelector('#dmg-validation')?.textContent || '').includes('Smogon Calc local'), 'motor Smogon', 15000);
     const result = document.querySelector('#dmg-results')?.textContent || '';
+    const detail = document.querySelector('#dmg-engine-detail')?.textContent || '';
     assert(result.includes('Smogon Calc local'), 'Nota do motor Smogon nao apareceu');
-    assert(result.includes('guaranteed 3HKO'), 'Descricao do Smogon nao apareceu');
+    assert(detail.includes('Linha Smogon'), 'Linha detalhada do Smogon nao apareceu');
+    assert(detail.includes('KO contextual'), 'Leitura contextual de KO nao apareceu');
+    assert(detail.includes('guaranteed 3HKO'), 'Descricao do Smogon nao apareceu');
   });
 
   await step('My Teams carrega galeria e resumo', async () => {

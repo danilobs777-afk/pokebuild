@@ -416,18 +416,6 @@
           </div>
         </div>
         <div class="field-group">
-          <label class="field-label">Campo Avancado</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <label class="check-label"><input type="checkbox" id="dmg-reflect"> Reflect</label>
-            <label class="check-label"><input type="checkbox" id="dmg-light-screen"> Light Screen</label>
-            <label class="check-label"><input type="checkbox" id="dmg-aurora-veil"> Aurora Veil</label>
-            <label class="check-label"><input type="checkbox" id="dmg-helping-hand"> Helping Hand</label>
-            <label class="check-label"><input type="checkbox" id="dmg-friend-guard"> Friend Guard</label>
-            <label class="check-label"><input type="checkbox" id="dmg-protected"> Protect</label>
-            <label class="check-label"><input type="checkbox" id="dmg-gravity"> Gravity</label>
-          </div>
-        </div>
-        <div class="field-group">
           <label class="field-label">Multi-hit</label>
           <select id="dmg-hit-count" class="select-input">
             <option value="auto" selected>Auto pelo golpe</option>
@@ -438,6 +426,136 @@
             <option value="10">Forcar 10 acertos</option>
           </select>
         </div>
+        <details class="dmg-advanced">
+          <summary>Avancado</summary>
+          <div class="dmg-advanced-grid">
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Campo</div>
+              <label class="check-label"><input type="checkbox" id="dmg-magic-room"> Magic Room</label>
+              <label class="check-label"><input type="checkbox" id="dmg-wonder-room"> Wonder Room</label>
+              <label class="check-label"><input type="checkbox" id="dmg-gravity"> Gravity</label>
+              <label class="check-label"><input type="checkbox" id="dmg-fairy-aura"> Fairy Aura</label>
+              <label class="check-label"><input type="checkbox" id="dmg-dark-aura"> Dark Aura</label>
+              <label class="check-label"><input type="checkbox" id="dmg-aura-break"> Aura Break</label>
+            </div>
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Ruin</div>
+              <label class="check-label"><input type="checkbox" id="dmg-beads-ruin"> Beads of Ruin</label>
+              <label class="check-label"><input type="checkbox" id="dmg-sword-ruin"> Sword of Ruin</label>
+              <label class="check-label"><input type="checkbox" id="dmg-tablets-ruin"> Tablets of Ruin</label>
+              <label class="check-label"><input type="checkbox" id="dmg-vessel-ruin"> Vessel of Ruin</label>
+            </div>
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Aliado atacante</div>
+              <label class="check-label"><input type="checkbox" id="dmg-helping-hand"> Helping Hand</label>
+              <label class="check-label"><input type="checkbox" id="dmg-battery"> Battery</label>
+              <label class="check-label"><input type="checkbox" id="dmg-power-spot"> Power Spot</label>
+              <label class="check-label"><input type="checkbox" id="dmg-flower-gift-atk"> Flower Gift</label>
+              <label class="check-label"><input type="checkbox" id="dmg-steely-spirit"> Steely Spirit</label>
+            </div>
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Defesa</div>
+              <label class="check-label"><input type="checkbox" id="dmg-reflect"> Reflect</label>
+              <label class="check-label"><input type="checkbox" id="dmg-light-screen"> Light Screen</label>
+              <label class="check-label"><input type="checkbox" id="dmg-aurora-veil"> Aurora Veil</label>
+              <label class="check-label"><input type="checkbox" id="dmg-friend-guard"> Friend Guard</label>
+              <label class="check-label"><input type="checkbox" id="dmg-protected"> Protect</label>
+              <label class="check-label"><input type="checkbox" id="dmg-foresight"> Foresight</label>
+              <label class="check-label"><input type="checkbox" id="dmg-flower-gift-def"> Flower Gift</label>
+            </div>
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Hazards</div>
+              <label class="check-label"><input type="checkbox" id="dmg-stealth-rock"> Stealth Rock</label>
+              <label class="check-label"><input type="checkbox" id="dmg-steelsurge"> G-Max Steelsurge</label>
+              <label class="check-label"><input type="checkbox" id="dmg-vinelash"> G-Max Vine Lash</label>
+              <label class="check-label"><input type="checkbox" id="dmg-wildfire"> G-Max Wildfire</label>
+              <label class="check-label"><input type="checkbox" id="dmg-cannonade"> G-Max Cannonade</label>
+              <label class="check-label"><input type="checkbox" id="dmg-volcalith"> G-Max Volcalith</label>
+              <label class="check-label"><input type="checkbox" id="dmg-seeded"> Leech Seed</label>
+              <label class="check-label"><input type="checkbox" id="dmg-salt-cured"> Salt Cure</label>
+              <div class="dmg-inline-control">
+                <span>Spikes</span>
+                <select id="dmg-spikes" class="select-input">
+                  <option value="0" selected>0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                </select>
+              </div>
+            </div>
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Estados</div>
+              <label class="check-label"><input type="checkbox" id="dmg-use-z"> Z-Move</label>
+              <label class="check-label"><input type="checkbox" id="dmg-use-max"> Max Move</label>
+              <label class="check-label"><input type="checkbox" id="dmg-stellar-first"> Stellar 1o uso</label>
+              <label class="check-label"><input type="checkbox" id="dmg-atk-dynamax"> Dynamax atacante</label>
+              <label class="check-label"><input type="checkbox" id="dmg-def-dynamax"> Dynamax defensor</label>
+              <label class="check-label"><input type="checkbox" id="dmg-atk-ability-on"> Habilidade ativa Atk</label>
+              <label class="check-label"><input type="checkbox" id="dmg-def-ability-on"> Habilidade ativa Def</label>
+              <label class="check-label"><input type="checkbox" id="dmg-atk-power-trick"> Power Trick Atk</label>
+              <label class="check-label"><input type="checkbox" id="dmg-def-power-trick"> Power Trick Def</label>
+            </div>
+            <div class="dmg-advanced-section">
+              <div class="dmg-advanced-title">Parametros</div>
+              <div class="dmg-inline-control">
+                <span>Boost Atk</span>
+                <select id="dmg-atk-boosted-stat" class="select-input">
+                  <option value="">Nenhum</option>
+                  <option value="auto">Auto</option>
+                  <option value="atk">Atk</option>
+                  <option value="def">Def</option>
+                  <option value="spa">SpA</option>
+                  <option value="spd">SpD</option>
+                  <option value="spe">Spe</option>
+                </select>
+              </div>
+              <div class="dmg-inline-control">
+                <span>Boost Def</span>
+                <select id="dmg-def-boosted-stat" class="select-input">
+                  <option value="">Nenhum</option>
+                  <option value="auto">Auto</option>
+                  <option value="atk">Atk</option>
+                  <option value="def">Def</option>
+                  <option value="spa">SpA</option>
+                  <option value="spd">SpD</option>
+                  <option value="spe">Spe</option>
+                </select>
+              </div>
+              <div class="dmg-inline-control">
+                <span>Aliados caidos</span>
+                <input type="number" id="dmg-allies-fainted" class="text-input" min="0" max="5" value="0">
+              </div>
+              <div class="dmg-inline-control">
+                <span>Turnos golpe</span>
+                <input type="number" id="dmg-move-times-used" class="text-input" min="1" max="5" value="1">
+              </div>
+              <div class="dmg-inline-control">
+                <span>Metronome</span>
+                <input type="number" id="dmg-metronome-turns" class="text-input" min="0" max="5" value="0">
+              </div>
+              <div class="dmg-inline-control">
+                <span>Dynamax Atk</span>
+                <input type="number" id="dmg-atk-dynamax-level" class="text-input" min="0" max="10" value="10">
+              </div>
+              <div class="dmg-inline-control">
+                <span>Dynamax Def</span>
+                <input type="number" id="dmg-def-dynamax-level" class="text-input" min="0" max="10" value="10">
+              </div>
+              <div class="dmg-inline-control">
+                <span>Toxic counter</span>
+                <input type="number" id="dmg-toxic-counter" class="text-input" min="1" max="15" value="1">
+              </div>
+              <div class="dmg-inline-control">
+                <span>Switch</span>
+                <select id="dmg-def-switching" class="select-input">
+                  <option value="">Nenhum</option>
+                  <option value="out">Saindo</option>
+                  <option value="in">Entrando</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
         <div class="field-group">
           <label class="field-label">Clima / Campo</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -513,6 +631,7 @@
       <div id="dmg-rolls" class="dmg-rolls"></div>
       <div id="dmg-summary" class="dmg-summary"></div>
       <div id="dmg-ko-badges" class="dmg-ko-badges"></div>
+      <div id="dmg-engine-detail" class="dmg-engine-detail hidden"></div>
       <div id="dmg-endturn-notes" style="margin-top:10px;font-size:12px;color:var(--text2);line-height:1.8;"></div>
     </div>
   </section>
@@ -554,10 +673,10 @@
 <script src="js/analyzer.js"></script>
 <script src="js/builder.js"></script>
 <script src="js/teams.js"></script>
-<script src="vendor/smogon-calc/data/production.min.js?v=25"></script>
-<script src="vendor/smogon-calc/production.min.js?v=25"></script>
-<script src="js/smogonCalcAdapter.js?v=25"></script>
-<script src="js/dmgCalc.js?v=25"></script>
+<script src="vendor/smogon-calc/data/production.min.js?v=26"></script>
+<script src="vendor/smogon-calc/production.min.js?v=26"></script>
+<script src="js/smogonCalcAdapter.js?v=26"></script>
+<script src="js/dmgCalc.js?v=26"></script>
 <script src="js/app.js"></script>
 <script>
   if (new URLSearchParams(location.search).has('smoke')) {
