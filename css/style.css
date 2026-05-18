@@ -942,10 +942,39 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
 
 @media(max-width: 640px) {
   .view { padding: 16px 12px 60px; }
-  .view-header h1 { font-size: 1.5rem; }
+  .view-header h1, .view-title { font-size: 1.5rem; }
   .sum-bar.s4 { grid-template-columns: 1fr 1fr; }
   .sum-bar.s5 { grid-template-columns: repeat(3, 1fr); }
   .dmg-context-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── <480px: smartphones ── */
+@media(max-width: 480px) {
+  /* Nav: logo menor, botões compactos */
+  .nav-logo { font-size: 1rem; letter-spacing: 0.08em; margin-right: 8px; }
+  .nav-btn  { padding: 6px 9px; font-size: 0.76rem; letter-spacing: 0.06em; }
+
+  /* Gen bar: oculta label "Geração:" para liberar espaço */
+  .gen-bar-label { display: none; }
+
+  /* View: padding horizontal mínimo e títulos menores */
+  .view { padding: 14px 8px 60px; }
+  .view-header h1,
+  .view-title { font-size: 1.3rem; }
+
+  /* TypeCalc: libera sticky no layout de coluna única */
+  .tc-input-card { position: static; }
+
+  /* Action grids: colunas iguais evitam overflow de texto */
+  .az-action-grid,
+  .bld-action-grid { grid-template-columns: 1fr 1fr; }
+
+  /* My Teams detail: botões de ação com gap menor */
+  #mt-detail > div:first-child { gap: 6px; }
+
+  /* Modais: padding mínimo para não sumir em telas <360px */
+  .modal-overlay { padding: 12px; }
+  .modal-box { padding: 16px; }
 }
 
 /* ═══════════════════════════════════════════════════════

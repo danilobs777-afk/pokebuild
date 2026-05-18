@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="100%" stop-color="#12121a"/>
+    </linearGradient>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <!-- Grid pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(124,58,237,0.06)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+
+  <!-- Decorative hexagon left -->
+  <polygon points="160,180 280,110 400,180 400,320 280,390 160,320"
+    fill="none" stroke="rgba(124,58,237,0.18)" stroke-width="3"/>
+  <!-- Decorative hexagon right -->
+  <polygon points="800,240 920,170 1040,240 1040,380 920,450 800,380"
+    fill="none" stroke="rgba(124,58,237,0.12)" stroke-width="2"/>
+
+  <!-- Center hexagon (logo) -->
+  <polygon points="600,200 660,233 660,300 600,333 540,300 540,233"
+    fill="none" stroke="url(#grad)" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Logo text -->
+  <text x="600" y="490" text-anchor="middle"
+    font-family="'Segoe UI', Arial, sans-serif"
+    font-size="80" font-weight="800" letter-spacing="8"
+    fill="url(#grad)">PokéBuild</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="545" text-anchor="middle"
+    font-family="'Courier New', monospace"
+    font-size="22" letter-spacing="4"
+    fill="rgba(107,107,138,1)">TYPE CALC · TEAM ANALYZER · BUILDER · DAMAGE SIM</text>
+</svg>
