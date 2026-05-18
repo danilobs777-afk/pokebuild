@@ -13,8 +13,10 @@ O Damage Simulator usa um bundle local do `@smogon/calc` para reproduzir a formu
 - estado avancado do campo: Magic Room, Wonder Room, auras, Aura Break, habilidades Ruin, Power Trick, Foresight, Flower Gift, Battery, Power Spot e Steely Spirit;
 - Max Move, Z-Move, primeiro uso Stellar, Dynamax, habilidade ativa, boosted stat e contadores relevantes;
 - hazards e efeitos residuais considerados na leitura de KO do motor: Stealth Rock, Spikes, G-Max Steelsurge, Vine Lash, Wildfire, Cannonade, Volcalith, Leech Seed e Salt Cure;
+- travas por geracao para esconder combinacoes impossiveis, como Z-Move fora da Gen 7, Dynamax fora da Gen 8 e Tera/Stellar fora da Gen 9;
+- presets de campo para limpar rapidamente, preparar Singles, preparar hazards ou preparar um cenario VGC;
 - Tera Type ofensivo e defensivo;
-- rolls de dano, badges de 1HKO/2HKO/3HKO/Safe, leitura contextual do Smogon Calc e notas de velocidade;
+- rolls de dano, badges de 1HKO/2HKO/3HKO/Safe, leitura contextual do Smogon Calc, barra pos-turno e notas de velocidade;
 - chip end-of-turn de burn, poison, toxic, Leftovers e Black Sludge.
 
 ## Fallback interno
@@ -51,6 +53,8 @@ Regras do fallback:
 - A efetividade manual existe apenas para o fallback interno. No motor Smogon, efetividade vem dos tipos, habilidades, itens e campo calculados pelo bundle.
 - As badges da UI continuam sendo a leitura rapida sobre os 16 rolls exibidos. A caixa "Linha Smogon / KO contextual" mostra a descricao do motor, incluindo hazards, recovery e recoil quando esses detalhes existem.
 - Quando o usuario ativa Max Move e Z-Move ao mesmo tempo, Max Move vence na traducao para o motor para evitar uma combinacao invalida.
+- A barra "Depois do turno" mostra HP restante apos dano e efeitos de fim de turno selecionados na UI. Entry hazards continuam aparecendo principalmente na leitura contextual do Smogon, porque acontecem na entrada, antes do golpe.
+- Travas de geracao desabilitam e ignoram controles fora da geracao ativa sem apagar texto digitado em campos como item, habilidade e natureza.
 
 ## Ao adicionar regras novas
 

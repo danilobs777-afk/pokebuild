@@ -80,6 +80,24 @@ function setValue(selector, value) {
   return el;
 }
 
+function setSelect(selector, value) {
+  const el = setValue(selector, value);
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+  return el;
+}
+
+async function loadMove(name) {
+  const expectedPower = { Earthquake: '100', 'Flare Blitz': '120', 'Drain Punch': '75' }[name];
+  setValue('#dmg-move-input', name);
+  await waitFor(() => document.querySelector(`#dmg-move-suggestions li[data-name="${name}"]`), `sugestao ${name}`, 15000);
+  click(`#dmg-move-suggestions li[data-name="${name}"]`);
+  await waitFor(() => {
+    const info = document.querySelector('#dmg-move-info:not(.hidden)');
+    const power = document.querySelector('#dmg-move-bp')?.textContent?.trim();
+    return info && (!expectedPower || power === expectedPower);
+  }, `golpe ${name} carregado`, 15000);
+}
+
 async function step(name, fn) {
   report(name, 'run');
   try {
@@ -133,10 +151,7 @@ async function runSmoke() {
   await step('Damage Simulator usa motor Smogon local', async () => {
     setValue('#dmg-atk-name', 'Charizard');
     setValue('#dmg-def-name', 'Toxapex');
-    setValue('#dmg-move-input', 'Earthquake');
-    await waitFor(() => document.querySelector('#dmg-move-suggestions li[data-name="Earthquake"]'), 'sugestao Earthquake', 15000);
-    click('#dmg-move-suggestions li[data-name="Earthquake"]');
-    await waitFor(() => document.querySelector('#dmg-move-info:not(.hidden)'), 'golpe carregado', 15000);
+    await loadMove('Earthquake');
     click('#dmg-calc-btn');
     await waitFor(() => (document.querySelector('#dmg-validation')?.textContent || '').includes('Smogon Calc local'), 'motor Smogon', 15000);
     const result = document.querySelector('#dmg-results')?.textContent || '';
@@ -145,6 +160,46 @@ async function runSmoke() {
     assert(detail.includes('Linha Smogon'), 'Linha detalhada do Smogon nao apareceu');
     assert(detail.includes('KO contextual'), 'Leitura contextual de KO nao apareceu');
     assert(detail.includes('guaranteed 3HKO'), 'Descricao do Smogon nao apareceu');
+  });
+
+  await step('Damage Simulator trava mecanicas por geracao', async () => {
+    setSelect('#dmg-calc-gen', '7');
+    await waitFor(() => !document.querySelector('#dmg-use-z')?.disabled && document.querySelector('#dmg-use-max')?.disabled, 'travas Gen 7');
+    assert(document.querySelector('#dmg-atk-tera')?.disabled, 'Tera deveria ficar bloqueado na Gen 7');
+    assert((document.querySelector('#dmg-format-notes')?.textContent || '').includes('Gen 7'), 'Nota de formato da Gen 7 nao apareceu');
+
+    setSelect('#dmg-calc-gen', '8');
+    await waitFor(() => !document.querySelector('#dmg-use-max')?.disabled && document.querySelector('#dmg-use-z')?.disabled, 'travas Gen 8');
+    assert(!document.querySelector('#dmg-atk-dynamax')?.disabled, 'Dynamax deveria ficar liberado na Gen 8');
+
+    setSelect('#dmg-calc-gen', '9');
+    await waitFor(() => !document.querySelector('#dmg-atk-tera')?.disabled && document.querySelector('#dmg-use-max')?.disabled, 'travas Gen 9');
+    assert(document.querySelector('#dmg-use-z')?.disabled, 'Z-Move deveria ficar bloqueado na Gen 9');
+  });
+
+  await step('Damage Simulator mostra pos-turno e KO contextual avancado', async () => {
+    setSelect('#dmg-calc-gen', '9');
+    click('[data-dmg-preset="hazards"]');
+    setSelect('#dmg-def-status', 'toxic');
+    setValue('#dmg-toxic-counter', '2');
+    setSelect('#dmg-def-passive-item', 'black-sludge-poison');
+    click('#dmg-calc-btn');
+    await waitFor(() => (document.querySelector('#dmg-engine-detail')?.textContent || '').includes('after Stealth Rock'), 'KO contextual com hazards', 15000);
+    const postTurn = document.querySelector('#dmg-postturn')?.textContent || '';
+    assert(postTurn.includes('HP final estimado'), 'Barra pos-turno nao apareceu');
+    assert(postTurn.includes('Toxic 2/16'), 'Toxic exato nao apareceu no pos-turno');
+  });
+
+  await step('Damage Simulator mostra recoil e recovery do motor', async () => {
+    setSelect('#dmg-calc-gen', '9');
+    setValue('#dmg-def-name', 'Blissey');
+    await loadMove('Flare Blitz');
+    click('#dmg-calc-btn');
+    await waitFor(() => (document.querySelector('#dmg-engine-detail')?.textContent || '').includes('Recoil'), 'recoil Smogon', 15000);
+
+    await loadMove('Drain Punch');
+    click('#dmg-calc-btn');
+    await waitFor(() => (document.querySelector('#dmg-engine-detail')?.textContent || '').includes('Recovery'), 'recovery Smogon', 15000);
   });
 
   await step('My Teams carrega galeria e resumo', async () => {

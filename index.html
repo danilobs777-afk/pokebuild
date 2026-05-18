@@ -404,6 +404,7 @@
               <option value="Doubles">Doubles / VGC</option>
             </select>
           </div>
+          <div id="dmg-format-notes" class="dmg-format-notes"></div>
         </div>
         <div class="field-group">
           <label class="field-label">Modificadores</label>
@@ -428,6 +429,12 @@
         </div>
         <details class="dmg-advanced">
           <summary>Avancado</summary>
+          <div class="dmg-preset-bar">
+            <button type="button" class="btn-secondary dmg-preset-btn" data-dmg-preset="clear">Limpar</button>
+            <button type="button" class="btn-secondary dmg-preset-btn" data-dmg-preset="singles">Singles</button>
+            <button type="button" class="btn-secondary dmg-preset-btn" data-dmg-preset="hazards">Hazards</button>
+            <button type="button" class="btn-secondary dmg-preset-btn" data-dmg-preset="vgc">VGC</button>
+          </div>
           <div class="dmg-advanced-grid">
             <div class="dmg-advanced-section">
               <div class="dmg-advanced-title">Campo</div>
@@ -628,6 +635,13 @@
         </div>
         <div id="dmg-hp-label" style="font-size:12px;color:var(--text2);margin-top:4px;"></div>
       </div>
+      <div id="dmg-postturn" class="dmg-postturn hidden">
+        <div class="dmg-postturn-title">Depois do turno</div>
+        <div class="dmg-postturn-bg">
+          <div id="dmg-postturn-range" class="dmg-postturn-range"></div>
+        </div>
+        <div id="dmg-postturn-label" class="dmg-postturn-label"></div>
+      </div>
       <div id="dmg-rolls" class="dmg-rolls"></div>
       <div id="dmg-summary" class="dmg-summary"></div>
       <div id="dmg-ko-badges" class="dmg-ko-badges"></div>
@@ -673,10 +687,10 @@
 <script src="js/analyzer.js"></script>
 <script src="js/builder.js"></script>
 <script src="js/teams.js"></script>
-<script src="vendor/smogon-calc/data/production.min.js?v=26"></script>
-<script src="vendor/smogon-calc/production.min.js?v=26"></script>
-<script src="js/smogonCalcAdapter.js?v=26"></script>
-<script src="js/dmgCalc.js?v=26"></script>
+<script src="vendor/smogon-calc/data/production.min.js?v=27"></script>
+<script src="vendor/smogon-calc/production.min.js?v=27"></script>
+<script src="js/smogonCalcAdapter.js?v=27"></script>
+<script src="js/dmgCalc.js?v=27"></script>
 <script src="js/app.js"></script>
 <script>
   if (new URLSearchParams(location.search).has('smoke')) {

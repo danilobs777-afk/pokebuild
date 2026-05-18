@@ -12,6 +12,85 @@
  */
 
 const DmgCalc = (() => {
+  // Shared inventory for the advanced panel. Keeping IDs, defaults and help
+  // text together avoids three separate maps drifting out of sync.
+  const ADVANCED_CONTROL_IDS = [
+    'dmg-magic-room', 'dmg-wonder-room', 'dmg-gravity', 'dmg-fairy-aura', 'dmg-dark-aura', 'dmg-aura-break',
+    'dmg-beads-ruin', 'dmg-sword-ruin', 'dmg-tablets-ruin', 'dmg-vessel-ruin',
+    'dmg-helping-hand', 'dmg-battery', 'dmg-power-spot', 'dmg-flower-gift-atk', 'dmg-steely-spirit',
+    'dmg-reflect', 'dmg-light-screen', 'dmg-aurora-veil', 'dmg-friend-guard', 'dmg-protected', 'dmg-foresight', 'dmg-flower-gift-def',
+    'dmg-stealth-rock', 'dmg-steelsurge', 'dmg-vinelash', 'dmg-wildfire', 'dmg-cannonade', 'dmg-volcalith', 'dmg-seeded', 'dmg-salt-cured',
+    'dmg-use-z', 'dmg-use-max', 'dmg-stellar-first', 'dmg-atk-dynamax', 'dmg-def-dynamax', 'dmg-atk-ability-on', 'dmg-def-ability-on',
+    'dmg-atk-power-trick', 'dmg-def-power-trick',
+    'dmg-spikes', 'dmg-atk-boosted-stat', 'dmg-def-boosted-stat', 'dmg-allies-fainted', 'dmg-move-times-used', 'dmg-metronome-turns',
+    'dmg-atk-dynamax-level', 'dmg-def-dynamax-level', 'dmg-toxic-counter', 'dmg-def-switching',
+  ];
+
+  const ADVANCED_DEFAULTS = {
+    'dmg-spikes': '0',
+    'dmg-atk-boosted-stat': '',
+    'dmg-def-boosted-stat': '',
+    'dmg-allies-fainted': '0',
+    'dmg-move-times-used': '1',
+    'dmg-metronome-turns': '0',
+    'dmg-atk-dynamax-level': '10',
+    'dmg-def-dynamax-level': '10',
+    'dmg-toxic-counter': '1',
+    'dmg-def-switching': '',
+  };
+
+  const ADVANCED_TOOLTIPS = {
+    'dmg-magic-room': 'Ignora efeitos de itens por 5 turnos quando o motor suporta a interacao.',
+    'dmg-wonder-room': 'Troca Defesa e Sp.Def no calculo.',
+    'dmg-gravity': 'Remove imunidades de Ground por airborne/Levitate e afeta alguns golpes.',
+    'dmg-fairy-aura': 'Aumenta golpes Fairy; use com Aura Break para inverter.',
+    'dmg-dark-aura': 'Aumenta golpes Dark; use com Aura Break para inverter.',
+    'dmg-aura-break': 'Inverte Fairy Aura e Dark Aura.',
+    'dmg-beads-ruin': 'Ativa o redutor global de Sp.Def da habilidade Beads of Ruin.',
+    'dmg-sword-ruin': 'Ativa o redutor global de Defense da habilidade Sword of Ruin.',
+    'dmg-tablets-ruin': 'Ativa o redutor global de Attack da habilidade Tablets of Ruin.',
+    'dmg-vessel-ruin': 'Ativa o redutor global de Sp.Atk da habilidade Vessel of Ruin.',
+    'dmg-helping-hand': 'Aplica Helping Hand ao atacante em Doubles.',
+    'dmg-battery': 'Aliado com Battery aumentando golpe especial.',
+    'dmg-power-spot': 'Aliado com Power Spot aumentando dano.',
+    'dmg-flower-gift-atk': 'Flower Gift no lado atacante sob sol.',
+    'dmg-steely-spirit': 'Aliado com Steely Spirit aumentando golpes Steel.',
+    'dmg-reflect': 'Tela contra dano fisico no lado defensor.',
+    'dmg-light-screen': 'Tela contra dano especial no lado defensor.',
+    'dmg-aurora-veil': 'Aurora Veil no lado defensor.',
+    'dmg-friend-guard': 'Aliado do defensor com Friend Guard.',
+    'dmg-protected': 'Defensor esta usando Protect ou equivalente.',
+    'dmg-foresight': 'Permite atingir alvos Ghost com Normal/Fighting em geracoes antigas.',
+    'dmg-flower-gift-def': 'Flower Gift no lado defensor sob sol.',
+    'dmg-stealth-rock': 'Entry hazard considerado na leitura de KO do Smogon.',
+    'dmg-steelsurge': 'Entry hazard G-Max Steelsurge considerado na leitura de KO.',
+    'dmg-vinelash': 'Residual G-Max Vine Lash ao fim do turno.',
+    'dmg-wildfire': 'Residual G-Max Wildfire ao fim do turno.',
+    'dmg-cannonade': 'Residual G-Max Cannonade ao fim do turno.',
+    'dmg-volcalith': 'Residual G-Max Volcalith ao fim do turno.',
+    'dmg-seeded': 'Leech Seed ativo no defensor.',
+    'dmg-salt-cured': 'Salt Cure ativo no defensor.',
+    'dmg-use-z': 'Converte o golpe em Z-Move quando a geracao permite.',
+    'dmg-use-max': 'Converte o golpe em Max Move quando a geracao permite.',
+    'dmg-stellar-first': 'Marca o primeiro uso Stellar para Tera Blast/Judgment e golpes afetados.',
+    'dmg-atk-dynamax': 'Atacante esta Dynamaxed.',
+    'dmg-def-dynamax': 'Defensor esta Dynamaxed, aumentando HP conforme o nivel Dynamax.',
+    'dmg-atk-ability-on': 'Forca habilidades condicionais do atacante como ativas.',
+    'dmg-def-ability-on': 'Forca habilidades condicionais do defensor como ativas.',
+    'dmg-atk-power-trick': 'Troca Attack e Defense do atacante para golpes fisicos.',
+    'dmg-def-power-trick': 'Troca Defense e Attack do defensor para golpes fisicos.',
+    'dmg-spikes': 'Camadas de Spikes no lado defensor para a leitura de KO.',
+    'dmg-atk-boosted-stat': 'Stat escolhido por Protosynthesis/Quark Drive no atacante.',
+    'dmg-def-boosted-stat': 'Stat escolhido por Protosynthesis/Quark Drive no defensor.',
+    'dmg-allies-fainted': 'Contador usado por habilidades/golpes como Supreme Overlord.',
+    'dmg-move-times-used': 'Turnos consecutivos para golpes que acumulam efeito.',
+    'dmg-metronome-turns': 'Contador do item Metronome, nao o golpe Metronome.',
+    'dmg-atk-dynamax-level': 'Nivel Dynamax do atacante.',
+    'dmg-def-dynamax-level': 'Nivel Dynamax do defensor.',
+    'dmg-toxic-counter': 'Turno atual do Toxic para chip N/16.',
+    'dmg-def-switching': 'Estado de switch do defensor, usado por Pursuit e afins.',
+  };
+
   function esc(value) {
     return PokeBuildUI.escapeHtml(value);
   }
@@ -58,6 +137,152 @@ const DmgCalc = (() => {
     }
     el.className = `dmg-validation ${kind || 'info'}`;
     el.innerHTML = list.map(msg => `<div>${esc(msg)}</div>`).join('');
+  }
+
+  function setControlDisabled(id, disabled, reason = '') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = disabled;
+    if (disabled) {
+      if (el.type === 'checkbox') el.checked = false;
+      else if (Object.prototype.hasOwnProperty.call(ADVANCED_DEFAULTS, id)) el.value = ADVANCED_DEFAULTS[id];
+      else if (id.endsWith('-tera')) el.value = 'none';
+      else if (id === 'dmg-terrain') el.value = 'none';
+    }
+
+    const wrapper = el.closest('.check-label, .dmg-inline-control, .field-group');
+    if (wrapper) {
+      wrapper.classList.toggle('is-disabled', disabled);
+      if (reason) wrapper.title = reason;
+      else if (ADVANCED_TOOLTIPS[id]) wrapper.title = ADVANCED_TOOLTIPS[id];
+    }
+  }
+
+  function setupAdvancedTooltips() {
+    Object.entries(ADVANCED_TOOLTIPS).forEach(([id, tip]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const wrapper = el.closest('.check-label, .dmg-inline-control') || el;
+      wrapper.classList?.add('has-help');
+      wrapper.title = tip;
+    });
+  }
+
+  function formatNotesForGen(gen) {
+    if (gen === 9) return 'Gen 9: Tera, Stellar, Ruin e Salt Cure liberados; Z-Move e Dynamax ficam bloqueados.';
+    if (gen === 8) return 'Gen 8: Dynamax, Max Move e efeitos G-Max liberados; Tera/Stellar e Z-Move ficam bloqueados.';
+    if (gen === 7) return 'Gen 7: Z-Move liberado; Dynamax, Max Move, Tera e Stellar ficam bloqueados.';
+    if (gen >= 3) return `Gen ${gen}: habilidades, itens e naturezas ativas conforme o motor; Tera, Z-Move e Dynamax ficam bloqueados.`;
+    if (gen === 2) return 'Gen 2: itens ativos; habilidades, naturezas, Tera, Z-Move e Dynamax ficam bloqueados.';
+    return 'Gen 1: itens, habilidades, naturezas, Tera, Z-Move e Dynamax ficam bloqueados.';
+  }
+
+  function syncDamageGenerationLocks() {
+    // The exact calc generation is allowed to be narrower than the global gen-bar.
+    // Invalid mechanics are disabled and ignored, while typed item/ability/nature
+    // text is preserved so switching generations does not destroy user input.
+    const gen = selectedCalcGen();
+    const notesEl = document.getElementById('dmg-format-notes');
+    if (notesEl) notesEl.textContent = formatNotesForGen(gen);
+
+    ['dmg-atk-item', 'dmg-def-item', 'dmg-def-passive-item'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('item', gen), 'Itens nao existem nesta geracao.')
+    );
+    ['dmg-atk-ability', 'dmg-def-ability', 'dmg-atk-ability-on', 'dmg-def-ability-on'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('ability', gen), 'Habilidades nao existem nesta geracao.')
+    );
+    ['dmg-atk-nature', 'dmg-def-nature'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('nature', gen), 'Naturezas nao existem nesta geracao.')
+    );
+    ['dmg-atk-tera', 'dmg-def-tera'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('tera', gen), 'Terastalizacao existe apenas na Gen 9.')
+    );
+
+    setControlDisabled('dmg-terrain', !featureAllowed('terrain', gen), 'Terrain existe a partir da Gen 6.');
+    setControlDisabled('dmg-use-z', !featureAllowed('zMove', gen), 'Z-Move existe apenas na Gen 7.');
+    setControlDisabled('dmg-use-max', !featureAllowed('maxMove', gen), 'Max Move existe apenas na Gen 8.');
+    setControlDisabled('dmg-atk-dynamax', !featureAllowed('dynamax', gen), 'Dynamax existe apenas na Gen 8.');
+    setControlDisabled('dmg-def-dynamax', !featureAllowed('dynamax', gen), 'Dynamax existe apenas na Gen 8.');
+    setControlDisabled('dmg-atk-dynamax-level', !featureAllowed('dynamax', gen), 'Nivel Dynamax existe apenas na Gen 8.');
+    setControlDisabled('dmg-def-dynamax-level', !featureAllowed('dynamax', gen), 'Nivel Dynamax existe apenas na Gen 8.');
+    setControlDisabled('dmg-stellar-first', !featureAllowed('stellar', gen), 'Stellar existe apenas com Tera na Gen 9.');
+
+    ['dmg-fairy-aura', 'dmg-dark-aura', 'dmg-aura-break'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('aura', gen), 'Auras existem a partir da Gen 6.')
+    );
+    ['dmg-beads-ruin', 'dmg-sword-ruin', 'dmg-tablets-ruin', 'dmg-vessel-ruin'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('ruin', gen), 'Habilidades Ruin existem na Gen 9.')
+    );
+    setControlDisabled('dmg-battery', !featureAllowed('battery', gen), 'Battery existe a partir da Gen 7.');
+    setControlDisabled('dmg-power-spot', !featureAllowed('powerSpot', gen), 'Power Spot existe a partir da Gen 8.');
+    setControlDisabled('dmg-steely-spirit', !featureAllowed('steelySpirit', gen), 'Steely Spirit existe a partir da Gen 8.');
+    ['dmg-flower-gift-atk', 'dmg-flower-gift-def'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('flowerGift', gen), 'Flower Gift existe a partir da Gen 4.')
+    );
+    setControlDisabled('dmg-friend-guard', !featureAllowed('friendGuard', gen), 'Friend Guard existe a partir da Gen 5.');
+    setControlDisabled('dmg-aurora-veil', !featureAllowed('auroraVeil', gen), 'Aurora Veil existe a partir da Gen 7.');
+    setControlDisabled('dmg-foresight', !featureAllowed('foresight', gen), 'Foresight so e relevante nas geracoes 2 a 7.');
+    setControlDisabled('dmg-magic-room', !featureAllowed('magicRoom', gen), 'Magic Room existe a partir da Gen 5.');
+    setControlDisabled('dmg-wonder-room', !featureAllowed('wonderRoom', gen), 'Wonder Room existe a partir da Gen 5.');
+    setControlDisabled('dmg-gravity', !featureAllowed('gravity', gen), 'Gravity existe a partir da Gen 4.');
+    ['dmg-atk-power-trick', 'dmg-def-power-trick'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('powerTrick', gen), 'Power Trick existe a partir da Gen 4.')
+    );
+    setControlDisabled('dmg-stealth-rock', !featureAllowed('stealthRock', gen), 'Stealth Rock existe a partir da Gen 4.');
+    setControlDisabled('dmg-spikes', !featureAllowed('spikes', gen), 'Spikes existe a partir da Gen 2.');
+    ['dmg-steelsurge', 'dmg-vinelash', 'dmg-wildfire', 'dmg-cannonade', 'dmg-volcalith'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('gmax', gen), 'Efeitos G-Max existem na Gen 8.')
+    );
+    setControlDisabled('dmg-salt-cured', !featureAllowed('saltCure', gen), 'Salt Cure existe na Gen 9.');
+    ['dmg-atk-boosted-stat', 'dmg-def-boosted-stat'].forEach(id =>
+      setControlDisabled(id, !featureAllowed('boostedStat', gen), 'Boosted stat e usado principalmente por mecanicas da Gen 9.')
+    );
+    setControlDisabled('dmg-allies-fainted', !featureAllowed('alliesFainted', gen), 'Aliados caidos e relevante para mecanicas modernas como Supreme Overlord.');
+    setControlDisabled('dmg-metronome-turns', !featureAllowed('metronomeItem', gen), 'O item Metronome existe a partir da Gen 4.');
+    setControlDisabled('dmg-def-switching', !featureAllowed('switching', gen), 'Switching e usado principalmente por Pursuit nas geracoes 2 a 7.');
+  }
+
+  function resetControlValue(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = false;
+    else if (Object.prototype.hasOwnProperty.call(ADVANCED_DEFAULTS, id)) el.value = ADVANCED_DEFAULTS[id];
+  }
+
+  function clearAdvancedControls() {
+    ADVANCED_CONTROL_IDS.forEach(resetControlValue);
+  }
+
+  function applyDamagePreset(name) {
+    clearAdvancedControls();
+    const gameType = document.getElementById('dmg-game-type');
+    const hitCount = document.getElementById('dmg-hit-count');
+    if (hitCount) hitCount.value = 'auto';
+
+    if (name === 'singles') {
+      if (gameType) gameType.value = 'Singles';
+    } else if (name === 'hazards') {
+      if (gameType) gameType.value = 'Singles';
+      const rocks = document.getElementById('dmg-stealth-rock');
+      const spikes = document.getElementById('dmg-spikes');
+      if (rocks && !rocks.disabled) rocks.checked = true;
+      if (spikes && !spikes.disabled) spikes.value = '1';
+    } else if (name === 'vgc') {
+      if (gameType) gameType.value = 'Doubles';
+      const helpingHand = document.getElementById('dmg-helping-hand');
+      const protect = document.getElementById('dmg-protected');
+      if (helpingHand && !helpingHand.disabled) helpingHand.checked = true;
+      if (protect && !protect.disabled) protect.checked = false;
+    }
+
+    syncDamageGenerationLocks();
+    setValidation('', []);
+  }
+
+  function setupDamagePresets() {
+    document.querySelectorAll('[data-dmg-preset]').forEach(button => {
+      button.addEventListener('click', () => applyDamagePreset(button.dataset.dmgPreset || 'clear'));
+    });
   }
 
   function setPokemonStatus(prefix, kind, text) {
@@ -472,7 +697,7 @@ const DmgCalc = (() => {
     const ivActive = document.getElementById(`${prefix}-iv-toggle`)?.dataset.active === 'true';
     const ivRaw    = ivActive ? parseInt(document.getElementById(`${prefix}-iv-${stat}`)?.value) : 31;
     const iv       = isNaN(ivRaw) ? 31 : ivRaw;
-    const nature   = document.getElementById(`${prefix}-nature`)?.value || 'Hardy';
+    const nature   = featureAllowed('nature') ? (document.getElementById(`${prefix}-nature`)?.value || 'Hardy') : 'Serious';
     const level    = parseInt(document.getElementById(`${prefix}-level`)?.value) || 50;
     const base     = baseStats?.[stat] ?? 80;
     return calcStat(base, stat, ev, iv, nature, level);
@@ -507,6 +732,46 @@ const DmgCalc = (() => {
     if (active === 'gen1') return 1;
     if (active === 'gen2to5') return 5;
     return 9;
+  }
+
+  function selectedCalcGen() {
+    return readNumber('dmg-calc-gen', defaultCalcGen());
+  }
+
+  function featureAllowed(feature, gen = selectedCalcGen()) {
+    const rules = {
+      item: gen >= 2,
+      ability: gen >= 3,
+      nature: gen >= 3,
+      terrain: gen >= 6,
+      tera: gen >= 9,
+      zMove: gen === 7,
+      maxMove: gen === 8,
+      dynamax: gen === 8,
+      stellar: gen >= 9,
+      aura: gen >= 6,
+      ruin: gen >= 9,
+      battery: gen >= 7,
+      powerSpot: gen >= 8,
+      steelySpirit: gen >= 8,
+      flowerGift: gen >= 4,
+      friendGuard: gen >= 5,
+      auroraVeil: gen >= 7,
+      foresight: gen >= 2 && gen <= 7,
+      magicRoom: gen >= 5,
+      wonderRoom: gen >= 5,
+      gravity: gen >= 4,
+      powerTrick: gen >= 4,
+      stealthRock: gen >= 4,
+      spikes: gen >= 2,
+      gmax: gen === 8,
+      saltCure: gen >= 9,
+      boostedStat: gen >= 9,
+      alliesFainted: gen >= 9,
+      metronomeItem: gen >= 4,
+      switching: gen >= 2 && gen <= 7,
+    };
+    return rules[feature] ?? true;
   }
 
   function syncCalcGenSelect() {
@@ -552,7 +817,7 @@ const DmgCalc = (() => {
     return value === 'none' ? '' : value;
   }
 
-  function readPokemonState(prefix, role) {
+  function readPokemonState(prefix, role, gen = selectedCalcGen()) {
     const selectedDefenderStatus = role === 'defender'
       ? ({ burn: 'brn', poison: 'psn', toxic: 'tox' }[document.getElementById('dmg-def-status')?.value] || '')
       : '';
@@ -560,9 +825,9 @@ const DmgCalc = (() => {
     const status = selectedDefenderStatus || (isParalyzed ? 'par' : '');
     return {
       name: document.getElementById(`${prefix}-name`)?.value?.trim() || '',
-      ability: document.getElementById(`${prefix}-ability`)?.value?.trim() || '',
-      item: document.getElementById(`${prefix}-item`)?.value?.trim() || '',
-      nature: document.getElementById(`${prefix}-nature`)?.value || 'Hardy',
+      ability: featureAllowed('ability', gen) ? (document.getElementById(`${prefix}-ability`)?.value?.trim() || '') : '',
+      item: featureAllowed('item', gen) ? (document.getElementById(`${prefix}-item`)?.value?.trim() || '') : '',
+      nature: featureAllowed('nature', gen) ? (document.getElementById(`${prefix}-nature`)?.value || 'Hardy') : 'Serious',
       level: readNumber(`${prefix}-level`, 50),
       currentHpPercent: readNumber(`${prefix}-hp-pct`, 100),
       evs: readStatValues(prefix, 'ev', 0),
@@ -570,38 +835,39 @@ const DmgCalc = (() => {
       offenseStage: readNumber(`${prefix}-stage-off`, 0),
       defenseStage: readNumber(`${prefix}-stage-off`, 0),
       speedStage: readNumber(`${prefix}-stage-spe`, 0),
-      teraType: teraValue(prefix),
+      teraType: featureAllowed('tera', gen) ? teraValue(prefix) : '',
       status,
       tailwind: readChecked(`${prefix}-tailwind`),
       isBurned: role === 'attacker' && readChecked('dmg-burn-atk'),
-      abilityOn: readChecked(role === 'attacker' ? 'dmg-atk-ability-on' : 'dmg-def-ability-on'),
-      isDynamaxed: readChecked(role === 'attacker' ? 'dmg-atk-dynamax' : 'dmg-def-dynamax'),
+      abilityOn: featureAllowed('ability', gen) && readChecked(role === 'attacker' ? 'dmg-atk-ability-on' : 'dmg-def-ability-on'),
+      isDynamaxed: featureAllowed('dynamax', gen) && readChecked(role === 'attacker' ? 'dmg-atk-dynamax' : 'dmg-def-dynamax'),
       dynamaxLevel: readClampedNumber(role === 'attacker' ? 'dmg-atk-dynamax-level' : 'dmg-def-dynamax-level', 10, 0, 10),
-      boostedStat: readSelectValue(role === 'attacker' ? 'dmg-atk-boosted-stat' : 'dmg-def-boosted-stat'),
-      alliesFainted: role === 'attacker' ? readClampedNumber('dmg-allies-fainted', 0, 0, 5) : 0,
+      boostedStat: featureAllowed('boostedStat', gen) ? readSelectValue(role === 'attacker' ? 'dmg-atk-boosted-stat' : 'dmg-def-boosted-stat') : '',
+      alliesFainted: role === 'attacker' && featureAllowed('alliesFainted', gen) ? readClampedNumber('dmg-allies-fainted', 0, 0, 5) : 0,
       toxicCounter: role === 'defender' ? readClampedNumber('dmg-toxic-counter', 1, 1, 15) : 1,
     };
   }
 
   function buildSmogonState() {
+    const gen = selectedCalcGen();
     return {
-      gen: readNumber('dmg-calc-gen', defaultCalcGen()),
+      gen,
       gameType: document.getElementById('dmg-game-type')?.value || 'Singles',
-      attacker: readPokemonState('dmg-atk', 'attacker'),
-      defender: readPokemonState('dmg-def', 'defender'),
+      attacker: readPokemonState('dmg-atk', 'attacker', gen),
+      defender: readPokemonState('dmg-def', 'defender', gen),
       move: {
         name: document.getElementById('dmg-move-input')?.value?.trim() || cachedMove?.name || '',
         type: cachedMove?.type?.name || '',
         category: cachedMove?.damage_class?.name || '',
         power: cachedMove?.power || 0,
-        useZ: readChecked('dmg-use-z') && !readChecked('dmg-use-max'),
-        useMax: readChecked('dmg-use-max'),
-        isStellarFirstUse: readChecked('dmg-stellar-first'),
+        useZ: featureAllowed('zMove', gen) && readChecked('dmg-use-z') && !readChecked('dmg-use-max'),
+        useMax: featureAllowed('maxMove', gen) && readChecked('dmg-use-max'),
+        isStellarFirstUse: featureAllowed('stellar', gen) && readChecked('dmg-stellar-first'),
         timesUsed: readClampedNumber('dmg-move-times-used', 1, 1, 5),
-        timesUsedWithMetronome: readClampedNumber('dmg-metronome-turns', 0, 0, 5),
+        timesUsedWithMetronome: featureAllowed('metronomeItem', gen) ? readClampedNumber('dmg-metronome-turns', 0, 0, 5) : 0,
       },
       weather: document.getElementById('dmg-weather')?.value || 'none',
-      terrain: document.getElementById('dmg-terrain')?.value || 'none',
+      terrain: featureAllowed('terrain', gen) ? (document.getElementById('dmg-terrain')?.value || 'none') : 'none',
       isCrit: readChecked('dmg-crit'),
       hits: document.getElementById('dmg-hit-count')?.value || 'auto',
       field: {
@@ -611,34 +877,34 @@ const DmgCalc = (() => {
         helpingHand: readChecked('dmg-helping-hand'),
         friendGuard: readChecked('dmg-friend-guard'),
         protected: readChecked('dmg-protected'),
-        gravity: readChecked('dmg-gravity'),
-        magicRoom: readChecked('dmg-magic-room'),
-        wonderRoom: readChecked('dmg-wonder-room'),
-        fairyAura: readChecked('dmg-fairy-aura'),
-        darkAura: readChecked('dmg-dark-aura'),
-        auraBreak: readChecked('dmg-aura-break'),
-        beadsRuin: readChecked('dmg-beads-ruin'),
-        swordRuin: readChecked('dmg-sword-ruin'),
-        tabletsRuin: readChecked('dmg-tablets-ruin'),
-        vesselRuin: readChecked('dmg-vessel-ruin'),
-        battery: readChecked('dmg-battery'),
-        powerSpot: readChecked('dmg-power-spot'),
-        flowerGiftAtk: readChecked('dmg-flower-gift-atk'),
-        steelySpirit: readChecked('dmg-steely-spirit'),
-        foresight: readChecked('dmg-foresight'),
-        flowerGiftDef: readChecked('dmg-flower-gift-def'),
-        stealthRock: readChecked('dmg-stealth-rock'),
-        steelsurge: readChecked('dmg-steelsurge'),
-        vinelash: readChecked('dmg-vinelash'),
-        wildfire: readChecked('dmg-wildfire'),
-        cannonade: readChecked('dmg-cannonade'),
-        volcalith: readChecked('dmg-volcalith'),
+        gravity: featureAllowed('gravity', gen) && readChecked('dmg-gravity'),
+        magicRoom: featureAllowed('magicRoom', gen) && readChecked('dmg-magic-room'),
+        wonderRoom: featureAllowed('wonderRoom', gen) && readChecked('dmg-wonder-room'),
+        fairyAura: featureAllowed('aura', gen) && readChecked('dmg-fairy-aura'),
+        darkAura: featureAllowed('aura', gen) && readChecked('dmg-dark-aura'),
+        auraBreak: featureAllowed('aura', gen) && readChecked('dmg-aura-break'),
+        beadsRuin: featureAllowed('ruin', gen) && readChecked('dmg-beads-ruin'),
+        swordRuin: featureAllowed('ruin', gen) && readChecked('dmg-sword-ruin'),
+        tabletsRuin: featureAllowed('ruin', gen) && readChecked('dmg-tablets-ruin'),
+        vesselRuin: featureAllowed('ruin', gen) && readChecked('dmg-vessel-ruin'),
+        battery: featureAllowed('battery', gen) && readChecked('dmg-battery'),
+        powerSpot: featureAllowed('powerSpot', gen) && readChecked('dmg-power-spot'),
+        flowerGiftAtk: featureAllowed('flowerGift', gen) && readChecked('dmg-flower-gift-atk'),
+        steelySpirit: featureAllowed('steelySpirit', gen) && readChecked('dmg-steely-spirit'),
+        foresight: featureAllowed('foresight', gen) && readChecked('dmg-foresight'),
+        flowerGiftDef: featureAllowed('flowerGift', gen) && readChecked('dmg-flower-gift-def'),
+        stealthRock: featureAllowed('stealthRock', gen) && readChecked('dmg-stealth-rock'),
+        steelsurge: featureAllowed('gmax', gen) && readChecked('dmg-steelsurge'),
+        vinelash: featureAllowed('gmax', gen) && readChecked('dmg-vinelash'),
+        wildfire: featureAllowed('gmax', gen) && readChecked('dmg-wildfire'),
+        cannonade: featureAllowed('gmax', gen) && readChecked('dmg-cannonade'),
+        volcalith: featureAllowed('gmax', gen) && readChecked('dmg-volcalith'),
         seeded: readChecked('dmg-seeded'),
-        saltCured: readChecked('dmg-salt-cured'),
-        spikes: readClampedNumber('dmg-spikes', 0, 0, 3),
-        powerTrickAtk: readChecked('dmg-atk-power-trick'),
-        powerTrickDef: readChecked('dmg-def-power-trick'),
-        defenderSwitching: readSelectValue('dmg-def-switching'),
+        saltCured: featureAllowed('saltCure', gen) && readChecked('dmg-salt-cured'),
+        spikes: featureAllowed('spikes', gen) ? readClampedNumber('dmg-spikes', 0, 0, 3) : 0,
+        powerTrickAtk: featureAllowed('powerTrick', gen) && readChecked('dmg-atk-power-trick'),
+        powerTrickDef: featureAllowed('powerTrick', gen) && readChecked('dmg-def-power-trick'),
+        defenderSwitching: featureAllowed('switching', gen) ? readSelectValue('dmg-def-switching') : '',
       },
       engineLabel: 'Motor Smogon Calc local aplicado.',
     };
@@ -898,6 +1164,7 @@ const DmgCalc = (() => {
 
   // ── Calculate ─────────────────────────────────────────────────
   function calculate() {
+    syncDamageGenerationLocks();
     const atkBs = getBaseStats('dmg-atk');
     const defBs = getBaseStats('dmg-def');
     const level  = parseInt(document.getElementById('dmg-atk-level').value) || 50;
@@ -943,10 +1210,11 @@ const DmgCalc = (() => {
     const moveName    = cachedMove?.name || null;
     const weather     = getFieldMod(weatherKey, terrainKey, moveType, moveName, atkGrounded, defGrounded);
 
-    const atkItem    = document.getElementById('dmg-atk-item')?.value?.trim()  || '';
-    const defItem    = document.getElementById('dmg-def-item')?.value?.trim()  || '';
-    const atkAbility = document.getElementById('dmg-atk-ability')?.value?.trim() || '';
-    const defAbility = document.getElementById('dmg-def-ability')?.value?.trim() || '';
+    const gen = selectedCalcGen();
+    const atkItem    = featureAllowed('item', gen) ? (document.getElementById('dmg-atk-item')?.value?.trim()  || '') : '';
+    const defItem    = featureAllowed('item', gen) ? (document.getElementById('dmg-def-item')?.value?.trim()  || '') : '';
+    const atkAbility = featureAllowed('ability', gen) ? (document.getElementById('dmg-atk-ability')?.value?.trim() || '') : '';
+    const defAbility = featureAllowed('ability', gen) ? (document.getElementById('dmg-def-ability')?.value?.trim() || '') : '';
     const atkHpPct   = parseInt(document.getElementById('dmg-atk-hp-pct')?.value) || 100;
     const defHpPct   = parseInt(document.getElementById('dmg-def-hp-pct')?.value) || 100;
 
@@ -1074,7 +1342,7 @@ const DmgCalc = (() => {
     }
 
     const defStatus      = document.getElementById('dmg-def-status')?.value || 'none';
-    const defPassiveItem = document.getElementById('dmg-def-passive-item')?.value || 'none';
+    const defPassiveItem = featureAllowed('item', selectedCalcGen()) ? (document.getElementById('dmg-def-passive-item')?.value || 'none') : 'none';
 
     const extraNotes = [
       ...atkMods.notes,
@@ -1122,6 +1390,76 @@ const DmgCalc = (() => {
     detailEl.innerHTML = rows.length ? rows.join('') : '';
   }
 
+  function clampHp(value, maxHpValue) {
+    return Math.min(maxHpValue, Math.max(0, value));
+  }
+
+  function defenderEndTurnEffects(defHp, endOfTurn = {}) {
+    const effects = [];
+    let net = 0;
+    const add = (label, amount) => {
+      const value = Math.max(0, Math.floor(amount));
+      if (!value) return;
+      net += value;
+      effects.push(`${label} +${value}`);
+    };
+    const chip = (label, amount) => {
+      const value = Math.max(0, Math.floor(amount));
+      if (!value) return;
+      net -= value;
+      effects.push(`${label} -${value}`);
+    };
+
+    if (endOfTurn.defStatus === 'poison') chip('Poison', defHp / 8);
+    if (endOfTurn.defStatus === 'burn') chip('Burn', defHp / 16);
+    if (endOfTurn.defStatus === 'toxic') {
+      const counter = readClampedNumber('dmg-toxic-counter', 1, 1, 15);
+      chip(`Toxic ${counter}/16`, (defHp * counter) / 16);
+    }
+
+    if (readChecked('dmg-seeded')) chip('Leech Seed', defHp / 8);
+    if (readChecked('dmg-salt-cured')) {
+      const defTypes = currentPokemonTypes('dmg-def');
+      chip('Salt Cure', defTypes.includes('Water') || defTypes.includes('Steel') ? defHp / 4 : defHp / 8);
+    }
+    [
+      ['dmg-vinelash', 'Vine Lash'],
+      ['dmg-wildfire', 'Wildfire'],
+      ['dmg-cannonade', 'Cannonade'],
+      ['dmg-volcalith', 'Volcalith'],
+    ].forEach(([id, label]) => {
+      if (readChecked(id)) chip(label, defHp / 6);
+    });
+
+    if (endOfTurn.defPassiveItem === 'leftovers') add('Leftovers', defHp / 16);
+    if (endOfTurn.defPassiveItem === 'black-sludge-poison') add('Black Sludge', defHp / 16);
+    if (endOfTurn.defPassiveItem === 'black-sludge-other') chip('Black Sludge', defHp / 8);
+
+    return { net, effects };
+  }
+
+  function renderPostTurn(minDmg, maxDmg, defHp, endOfTurn = {}) {
+    // This bar is a local UI projection for damage + end-of-turn effects. Entry
+    // hazards stay in the Smogon KO context because they happen before the attack.
+    const postEl = document.getElementById('dmg-postturn');
+    const rangeEl = document.getElementById('dmg-postturn-range');
+    const labelEl = document.getElementById('dmg-postturn-label');
+    if (!postEl || !rangeEl || !labelEl) return;
+
+    const { net, effects } = defenderEndTurnEffects(defHp, endOfTurn);
+    const lowHp = clampHp(defHp - maxDmg + net, defHp);
+    const highHp = clampHp(defHp - minDmg + net, defHp);
+    const lowPct = (lowHp / defHp) * 100;
+    const highPct = (highHp / defHp) * 100;
+    rangeEl.style.left = `${lowPct}%`;
+    rangeEl.style.width = `${Math.max(1, highPct - lowPct)}%`;
+
+    const effectText = effects.length ? ` Efeitos: ${effects.join(', ')}.` : ' Sem efeitos adicionais de fim de turno.';
+    labelEl.innerHTML =
+      `HP final estimado: <strong>${lowHp}-${highHp}</strong> / ${defHp} (${lowPct.toFixed(1)}-${highPct.toFixed(1)}%).${esc(effectText)}`;
+    postEl.classList.remove('hidden');
+  }
+
   function renderResults(rolls, defHp, endOfTurn = {}) {
     const resultsEl = document.getElementById('dmg-results');
     resultsEl.classList.remove('hidden');
@@ -1136,6 +1474,8 @@ const DmgCalc = (() => {
     document.getElementById('dmg-range-overlay').style.width = (maxPct - minPct) + '%';
     document.getElementById('dmg-hp-label').textContent =
       `${minDmg}–${maxDmg} dano / ${defHp} HP (${(minPct).toFixed(1)}–${(maxPct).toFixed(1)}%)`;
+
+    renderPostTurn(minDmg, maxDmg, defHp, endOfTurn);
 
     // Valores de roll individuais
     document.getElementById('dmg-rolls').innerHTML = `
@@ -1317,12 +1657,17 @@ const DmgCalc = (() => {
     setupIvToggle('dmg-atk');
     setupIvToggle('dmg-def');
     setupMoveAutocomplete();
+    setupAdvancedTooltips();
+    setupDamagePresets();
     syncCalcGenSelect();
+    syncDamageGenerationLocks();
 
     document.getElementById('dmg-atk-nature').addEventListener('change', () => renderStatsRow('dmg-atk'));
     document.getElementById('dmg-def-nature').addEventListener('change', () => renderStatsRow('dmg-def'));
     document.getElementById('dmg-calc-gen')?.addEventListener('change', e => {
       e.currentTarget.dataset.userSelected = 'true';
+      syncDamageGenerationLocks();
+      syncDerivedControls();
     });
 
     document.getElementById('dmg-calc-btn').addEventListener('click', calculate);
@@ -1330,6 +1675,7 @@ const DmgCalc = (() => {
 
   function rerender() {
     syncCalcGenSelect();
+    syncDamageGenerationLocks();
     syncDerivedControls();
   }
 

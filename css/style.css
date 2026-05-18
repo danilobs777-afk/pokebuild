@@ -1295,6 +1295,25 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
   list-style-position: inside;
 }
 .dmg-advanced[open] summary { border-bottom: 1px solid var(--border); }
+.dmg-format-notes {
+  margin-top: 7px;
+  min-height: 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.66rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+.dmg-preset-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 9px 10px 0;
+}
+.dmg-preset-btn {
+  min-height: 28px;
+  padding: 4px 9px;
+  font-size: 0.68rem;
+}
 .dmg-advanced-grid { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 10px; }
 .dmg-advanced-section {
   border: 1px solid rgba(255,255,255,0.06);
@@ -1323,6 +1342,19 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
 .dmg-inline-control select {
   width: 100%;
   min-width: 0;
+}
+.check-label.has-help,
+.dmg-inline-control.has-help {
+  cursor: help;
+}
+.check-label.is-disabled,
+.dmg-inline-control.is-disabled,
+.field-group.is-disabled {
+  opacity: 0.48;
+}
+.check-label.is-disabled,
+.dmg-inline-control.is-disabled {
+  cursor: not-allowed;
 }
 
 /* EV grid in damage calc */
@@ -1359,6 +1391,41 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
 .badge-3hko { background: rgba(234,179,8,0.1);  border: 1px solid rgba(234,179,8,0.3);  color: var(--yellow); }
 .badge-no   { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: var(--green); }
 .dmg-summary { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--text-dim); margin-top: 8px; }
+.dmg-postturn {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(34,197,94,0.22);
+  border-radius: 6px;
+  background: rgba(34,197,94,0.06);
+}
+.dmg-postturn-title {
+  margin-bottom: 6px;
+  color: var(--green);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dmg-postturn-bg {
+  height: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(239,68,68,0.12);
+  position: relative;
+}
+.dmg-postturn-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(34,197,94,0.68), rgba(74,222,128,0.92));
+}
+.dmg-postturn-label {
+  margin-top: 5px;
+  font-size: 0.72rem;
+  color: var(--text2);
+}
 .dmg-engine-detail {
   margin-top: 10px;
   padding: 9px 10px;
