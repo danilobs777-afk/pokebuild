@@ -386,6 +386,26 @@
           </div>
         </div>
         <div class="field-group">
+          <label class="field-label">Motor / Formato</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="dmg-calc-gen" class="select-input" style="flex:1">
+              <option value="9" selected>Gen 9 (SV)</option>
+              <option value="8">Gen 8 (SwSh)</option>
+              <option value="7">Gen 7 (SM/USUM)</option>
+              <option value="6">Gen 6 (XY/ORAS)</option>
+              <option value="5">Gen 5 (BW/B2W2)</option>
+              <option value="4">Gen 4 (DPP/HGSS)</option>
+              <option value="3">Gen 3 (RSE/FRLG)</option>
+              <option value="2">Gen 2 (GSC)</option>
+              <option value="1">Gen 1 (RBY)</option>
+            </select>
+            <select id="dmg-game-type" class="select-input" style="flex:1">
+              <option value="Singles" selected>Singles</option>
+              <option value="Doubles">Doubles / VGC</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
           <label class="field-label">Modificadores</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <label class="check-label"><input type="checkbox" id="dmg-crit"> Crítico</label>
@@ -394,6 +414,29 @@
             <label class="check-label"><input type="checkbox" id="dmg-stab"> STAB</label>
             <label class="check-label"><input type="checkbox" id="dmg-trick-room"> Trick Room</label>
           </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Campo Avancado</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <label class="check-label"><input type="checkbox" id="dmg-reflect"> Reflect</label>
+            <label class="check-label"><input type="checkbox" id="dmg-light-screen"> Light Screen</label>
+            <label class="check-label"><input type="checkbox" id="dmg-aurora-veil"> Aurora Veil</label>
+            <label class="check-label"><input type="checkbox" id="dmg-helping-hand"> Helping Hand</label>
+            <label class="check-label"><input type="checkbox" id="dmg-friend-guard"> Friend Guard</label>
+            <label class="check-label"><input type="checkbox" id="dmg-protected"> Protect</label>
+            <label class="check-label"><input type="checkbox" id="dmg-gravity"> Gravity</label>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Multi-hit</label>
+          <select id="dmg-hit-count" class="select-input">
+            <option value="auto" selected>Auto pelo golpe</option>
+            <option value="2">Forcar 2 acertos</option>
+            <option value="3">Forcar 3 acertos</option>
+            <option value="4">Forcar 4 acertos</option>
+            <option value="5">Forcar 5 acertos</option>
+            <option value="10">Forcar 10 acertos</option>
+          </select>
         </div>
         <div class="field-group">
           <label class="field-label">Clima / Campo</label>
@@ -415,7 +458,7 @@
           </div>
         </div>
         <div class="field-group">
-          <label class="field-label">Efetividade de Tipo</label>
+          <label class="field-label">Efetividade de Tipo (fallback manual)</label>
           <select id="dmg-eff" class="select-input">
             <option value="0">0× (imune)</option>
             <option value="0.25">¼× (dupla resist)</option>
@@ -511,7 +554,10 @@
 <script src="js/analyzer.js"></script>
 <script src="js/builder.js"></script>
 <script src="js/teams.js"></script>
-<script src="js/dmgCalc.js"></script>
+<script src="vendor/smogon-calc/data/production.min.js?v=24"></script>
+<script src="vendor/smogon-calc/production.min.js?v=24"></script>
+<script src="js/smogonCalcAdapter.js?v=24"></script>
+<script src="js/dmgCalc.js?v=24"></script>
 <script src="js/app.js"></script>
 <script>
   if (new URLSearchParams(location.search).has('smoke')) {

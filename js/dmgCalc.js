@@ -3,11 +3,9 @@
 /**
  * dmgCalc.js — Calculadora de dano
  * ---------------------------------
- * Simula o dano de um golpe entre dois Pokémon usando a fórmula oficial Gen 5+.
- * Gera 16 valores de roll (multiplicadores 85–100) para mostrar o range real.
- *
- * Fórmula: floor(floor(floor(2*Lv/5+2) * Pow * Atk/Def) / 50 + 2) * mods
- * Mods aplicados em ordem: weather → crit → STAB → typeEff → burn
+ * Usa o bundle local do Smogon Calc para reproduzir o motor competitivo de dano.
+ * O calculo interno permanece como fallback quando algum dado nao casa com a
+ * base local vendorizada.
  *
  * Dependências: data.js (STAT_KEYS, STAT_LABELS, NATURES, POKEMON_DB, calcStat),
  *   ui.js (PokeBuildUI), api.js (PokeAPI.getPokemon, PokeAPI.getMove).
@@ -119,6 +117,10 @@ const DmgCalc = (() => {
   // ── Mini build form (attacker / defender) ────────────────────
   function buildForm(prefix, label) {
     const natureOpts = Object.keys(NATURES).map(n => `<option value="${n}"${n==='Hardy'?' selected':''}>${n}</option>`).join('');
+    const typeOpts = ['none', ...TYPES].map(type => {
+      const label = type === 'none' ? 'Sem Tera' : type;
+      return `<option value="${type}">${label}</option>`;
+    }).join('');
     return `
       <div class="field-group">
         <label class="field-label">Pokémon</label>
@@ -147,6 +149,10 @@ const DmgCalc = (() => {
         <div class="field-group" style="flex:1;min-width:80px;">
           <label class="field-label">HP atual %</label>
           <input type="number" class="text-input" id="${prefix}-hp-pct" value="100" min="1" max="100" style="width:70px">
+        </div>
+        <div class="field-group" style="flex:1;min-width:110px;">
+          <label class="field-label">Tera Type</label>
+          <select class="select-input" id="${prefix}-tera">${typeOpts}</select>
         </div>
       </div>
       <div class="field-group">
@@ -496,6 +502,100 @@ const DmgCalc = (() => {
     try { return JSON.parse(bsWrap.dataset.bs); } catch { return null; }
   }
 
+  function defaultCalcGen() {
+    const active = GenerationRules?.activeGen?.() || 'gen6plus';
+    if (active === 'gen1') return 1;
+    if (active === 'gen2to5') return 5;
+    return 9;
+  }
+
+  function syncCalcGenSelect() {
+    const select = document.getElementById('dmg-calc-gen');
+    if (!select || select.dataset.userSelected === 'true') return;
+    select.value = String(defaultCalcGen());
+  }
+
+  function readNumber(id, fallback) {
+    const value = Number(document.getElementById(id)?.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function readChecked(id) {
+    return document.getElementById(id)?.checked ?? false;
+  }
+
+  function readStatValues(prefix, group, fallback) {
+    return STAT_KEYS.reduce((acc, stat) => {
+      acc[stat] = readNumber(`${prefix}-${group}-${stat}`, fallback);
+      return acc;
+    }, {});
+  }
+
+  function readIvs(prefix) {
+    const active = document.getElementById(`${prefix}-iv-toggle`)?.dataset.active === 'true';
+    if (!active) return STAT_KEYS.reduce((acc, stat) => ({ ...acc, [stat]: 31 }), {});
+    return readStatValues(prefix, 'iv', 31);
+  }
+
+  function teraValue(prefix) {
+    const value = document.getElementById(`${prefix}-tera`)?.value || 'none';
+    return value === 'none' ? '' : value;
+  }
+
+  function readPokemonState(prefix, role) {
+    const selectedDefenderStatus = role === 'defender'
+      ? ({ burn: 'brn', poison: 'psn', toxic: 'tox' }[document.getElementById('dmg-def-status')?.value] || '')
+      : '';
+    const isParalyzed = readChecked(`${prefix}-paralyzed`);
+    const status = selectedDefenderStatus || (isParalyzed ? 'par' : '');
+    return {
+      name: document.getElementById(`${prefix}-name`)?.value?.trim() || '',
+      ability: document.getElementById(`${prefix}-ability`)?.value?.trim() || '',
+      item: document.getElementById(`${prefix}-item`)?.value?.trim() || '',
+      nature: document.getElementById(`${prefix}-nature`)?.value || 'Hardy',
+      level: readNumber(`${prefix}-level`, 50),
+      currentHpPercent: readNumber(`${prefix}-hp-pct`, 100),
+      evs: readStatValues(prefix, 'ev', 0),
+      ivs: readIvs(prefix),
+      offenseStage: readNumber(`${prefix}-stage-off`, 0),
+      defenseStage: readNumber(`${prefix}-stage-off`, 0),
+      speedStage: readNumber(`${prefix}-stage-spe`, 0),
+      teraType: teraValue(prefix),
+      status,
+      tailwind: readChecked(`${prefix}-tailwind`),
+      isBurned: role === 'attacker' && readChecked('dmg-burn-atk'),
+    };
+  }
+
+  function buildSmogonState() {
+    return {
+      gen: readNumber('dmg-calc-gen', defaultCalcGen()),
+      gameType: document.getElementById('dmg-game-type')?.value || 'Singles',
+      attacker: readPokemonState('dmg-atk', 'attacker'),
+      defender: readPokemonState('dmg-def', 'defender'),
+      move: {
+        name: document.getElementById('dmg-move-input')?.value?.trim() || cachedMove?.name || '',
+        type: cachedMove?.type?.name || '',
+        category: cachedMove?.damage_class?.name || '',
+        power: cachedMove?.power || 0,
+      },
+      weather: document.getElementById('dmg-weather')?.value || 'none',
+      terrain: document.getElementById('dmg-terrain')?.value || 'none',
+      isCrit: readChecked('dmg-crit'),
+      hits: document.getElementById('dmg-hit-count')?.value || 'auto',
+      field: {
+        reflect: readChecked('dmg-reflect'),
+        lightScreen: readChecked('dmg-light-screen'),
+        auroraVeil: readChecked('dmg-aurora-veil'),
+        helpingHand: readChecked('dmg-helping-hand'),
+        friendGuard: readChecked('dmg-friend-guard'),
+        protected: readChecked('dmg-protected'),
+        gravity: readChecked('dmg-gravity'),
+      },
+      engineLabel: 'Motor Smogon Calc local aplicado.',
+    };
+  }
+
   function stageMultiplier(s) {
     return s >= 0 ? (2 + s) / 2 : 2 / (2 - s);
   }
@@ -679,6 +779,7 @@ const DmgCalc = (() => {
     const defBs = getBaseStats('dmg-def');
     const level  = parseInt(document.getElementById('dmg-atk-level').value) || 50;
     const warnings = [];
+    const fallbackWarnings = [];
     if (!cachedMove) {
       setValidation('error', 'Selecione um golpe no autocomplete antes de calcular.');
       return;
@@ -691,8 +792,8 @@ const DmgCalc = (() => {
       return;
     }
 
-    if (!atkBs) warnings.push('Atacante sem stats reais carregados: usando base 80 como fallback.');
-    if (!defBs) warnings.push('Defensor sem stats reais carregados: usando base 80 como fallback.');
+    if (!atkBs) fallbackWarnings.push('Atacante sem stats reais carregados: fallback interno usaria base 80.');
+    if (!defBs) fallbackWarnings.push('Defensor sem stats reais carregados: fallback interno usaria base 80.');
 
     const moveCategory = cachedMove?.damage_class?.name || 'physical';
     const isSpecial = moveCategory === 'special';
@@ -777,18 +878,42 @@ const DmgCalc = (() => {
     const atkName  = document.getElementById('dmg-atk-name').value || 'Atacante';
     const defName  = document.getElementById('dmg-def-name').value || 'Defensor';
 
-    let rolls = calcDamage(atkStatFinal, defStatFinal, powerFinal, level,
-      { stab, typeEff: typeEffMod, crit, weather, burnAtkPenalty: activeBurnDrop, critMult: atkMods.critMult });
+    let usedSmogonEngine = false;
+    let smogonEngineNotes = [];
+    let smogonDescription = '';
+    let resultDefHp = defHp;
+    let rolls;
 
-    // Multiplicadores finais (Life Orb, Filter, Multiscale, etc.)
-    const finalMult = atkMods.finalMult * defMods.finalMult;
-    if (finalMult !== 1) rolls = rolls.map(r => Math.floor(r * finalMult));
+    if (window.SmogonDamage?.isReady?.()) {
+      try {
+        const smogonResult = window.SmogonDamage.calculate(buildSmogonState());
+        rolls = smogonResult.rolls.map(r => Math.max(0, Math.floor(r)));
+        resultDefHp = Math.max(1, Math.floor(smogonResult.defHp || defHp));
+        smogonEngineNotes = smogonResult.notes || [];
+        smogonDescription = smogonResult.description || '';
+        usedSmogonEngine = true;
+      } catch (err) {
+        warnings.push(`Motor Smogon local nao conseguiu calcular (${err.message}). Usando fallback interno.`);
+      }
+    } else {
+      warnings.push('Motor Smogon local nao carregado. Usando fallback interno.');
+    }
+
+    if (!usedSmogonEngine) {
+      warnings.push(...fallbackWarnings);
+      rolls = calcDamage(atkStatFinal, defStatFinal, powerFinal, level,
+        { stab, typeEff: typeEffMod, crit, weather, burnAtkPenalty: activeBurnDrop, critMult: atkMods.critMult });
+
+      // Multiplicadores finais (Life Orb, Filter, Multiscale, etc.)
+      const finalMult = atkMods.finalMult * defMods.finalMult;
+      if (finalMult !== 1) rolls = rolls.map(r => Math.floor(r * finalMult));
+    }
 
     // Multi-hit
     const minHits = cachedMove?.meta?.min_hits;
     const maxHits = cachedMove?.meta?.max_hits;
     let multiHitData = null;
-    if (minHits != null && maxHits != null && maxHits > 1) {
+    if (!usedSmogonEngine && minHits != null && maxHits != null && maxHits > 1) {
       const isSkillLink = atkAbility === 'Skill Link';
       if (isSkillLink && maxHits >= 5) {
         multiHitData = [{ hits: 5, prob: 1, label: '5 acertos (Skill Link)' }];
@@ -813,13 +938,19 @@ const DmgCalc = (() => {
     const extraNotes = [
       ...atkMods.notes,
       ...fieldNotes,
+      usedSmogonEngine ? 'smogon-engine' : '',
       burnAtkRaw && moveCategory !== 'physical' ? 'burn-special' : '',
       burnAtkRaw && atkMods.ignoreBurnDrop ? 'burn-ignored' : '',
       activeBurnDrop ? 'burn-attack' : '',
     ].filter(Boolean);
-    setValidation(warnings.length ? 'warning' : 'success', warnings.length ? warnings : 'Calculo pronto com dados carregados.');
-    renderResults(rolls, defHp, {
+    const validationMessages = warnings.length ? warnings : [
+      usedSmogonEngine ? 'Calculo pronto com Smogon Calc local.' : 'Calculo pronto com fallback interno.',
+    ];
+    setValidation(warnings.length ? 'warning' : 'success', validationMessages);
+    renderResults(rolls, resultDefHp, {
       burnChip, atkHp, extraNotes, multiHitData,
+      engineNotes: smogonEngineNotes,
+      engineDescription: smogonDescription,
       atkSpe: atkSpeFinal, defSpe: defSpeFinal,
       atkSpeConditions, defSpeConditions,
       trickRoom, atkName, defName,
@@ -879,8 +1010,19 @@ const DmgCalc = (() => {
 
     const notesEl = document.getElementById('dmg-endturn-notes');
     if (notesEl) {
-      const { burnChip, atkHp, atkSpe, defSpe, atkSpeConditions = [], defSpeConditions = [], trickRoom, atkName, defName, extraNotes = [], multiHitData, defStatus, defPassiveItem } = endOfTurn;
+      const {
+        burnChip, atkHp, atkSpe, defSpe,
+        atkSpeConditions = [], defSpeConditions = [],
+        trickRoom, atkName, defName,
+        extraNotes = [], engineNotes = [], engineDescription = '',
+        multiHitData, defStatus, defPassiveItem
+      } = endOfTurn;
       const notes = [];
+      if (extraNotes.includes('smogon-engine')) {
+        notes.push('Smogon Calc local — motor oficial da comunidade aplicado para formula, itens, habilidades, telas, Tera e casos especiais de golpes.');
+      }
+      engineNotes.filter(Boolean).forEach(note => notes.push(esc(note)));
+      if (engineDescription) notes.push(esc(engineDescription));
       if (burnChip) {
         notes.push(`Queimado — atacante perde <strong>${burnChip} HP</strong> ao final do turno (1/16 de ${atkHp} HP)`);
       }
@@ -1008,12 +1150,21 @@ const DmgCalc = (() => {
     setupIvToggle('dmg-atk');
     setupIvToggle('dmg-def');
     setupMoveAutocomplete();
+    syncCalcGenSelect();
 
     document.getElementById('dmg-atk-nature').addEventListener('change', () => renderStatsRow('dmg-atk'));
     document.getElementById('dmg-def-nature').addEventListener('change', () => renderStatsRow('dmg-def'));
+    document.getElementById('dmg-calc-gen')?.addEventListener('change', e => {
+      e.currentTarget.dataset.userSelected = 'true';
+    });
 
     document.getElementById('dmg-calc-btn').addEventListener('click', calculate);
   }
 
-  return { init, rerender: syncDerivedControls };
+  function rerender() {
+    syncCalcGenSelect();
+    syncDerivedControls();
+  }
+
+  return { init, rerender };
 })();

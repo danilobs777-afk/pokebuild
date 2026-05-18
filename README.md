@@ -8,7 +8,7 @@ PokeBuild e uma ferramenta competitiva de Pokemon feita em HTML, CSS e JavaScrip
 - Team Analyzer: monta uma visao rapida de cobertura, matchup, fraquezas e sinergia defensiva.
 - Team Builder: cria times completos, valida habilidades/golpes via PokeAPI e exporta/importa formato Smogon.
 - My Teams: lista, filtra, detalha, exporta, edita e exclui times salvos localmente.
-- Damage Simulator: calcula ranges de dano com rolls 85-100%, STAB, efetividade, campo, itens, habilidades e status principais.
+- Damage Simulator: calcula ranges de dano com bundle local do Smogon Calc, rolls 85-100%, geracao exata, formato Singles/Doubles, Tera, campo, itens, habilidades e status principais.
 
 ## Regras globais
 
@@ -36,6 +36,7 @@ Use `GenerationRules` para consultar essas regras. Evite espalhar checks como `g
 - `js/analyzer.js`: Team Analyzer.
 - `js/builder.js`: Team Builder.
 - `js/teams.js`: My Teams.
+- `js/smogonCalcAdapter.js`: adaptador do bundle local do Smogon Calc para o Damage Simulator.
 - `js/dmgCalc.js`: Damage Simulator.
 - `sw.js`: cache PWA.
 - `tests/smoke.js`: smoke tests de navegador.
@@ -56,4 +57,4 @@ O painel no canto inferior esquerdo deve mostrar `PASS` em todos os fluxos.
 - Use `PokeBuildUI.escapeHtml()` antes de inserir texto do usuario via `innerHTML`.
 - Use `GenerationRules.capabilitiesForGame()` para campos condicionais do Builder.
 - Use `GenerationRules.moveVersionGroups()` para filtrar golpes por jogo/formato.
-- O Damage Simulator e uma calculadora pratica, nao uma reimplementacao completa de Pokemon Showdown.
+- O Damage Simulator usa `@smogon/calc` vendorizado localmente e mantem um fallback interno para nao quebrar a UX quando algum dado nao resolve.

@@ -130,6 +130,20 @@ async function runSmoke() {
     assert(validation.includes('Selecione um golpe'), 'Validacao de golpe obrigatorio nao apareceu');
   });
 
+  await step('Damage Simulator usa motor Smogon local', async () => {
+    setValue('#dmg-atk-name', 'Charizard');
+    setValue('#dmg-def-name', 'Toxapex');
+    setValue('#dmg-move-input', 'Earthquake');
+    await waitFor(() => document.querySelector('#dmg-move-suggestions li[data-name="Earthquake"]'), 'sugestao Earthquake', 15000);
+    click('#dmg-move-suggestions li[data-name="Earthquake"]');
+    await waitFor(() => document.querySelector('#dmg-move-info:not(.hidden)'), 'golpe carregado', 15000);
+    click('#dmg-calc-btn');
+    await waitFor(() => (document.querySelector('#dmg-validation')?.textContent || '').includes('Smogon Calc local'), 'motor Smogon', 15000);
+    const result = document.querySelector('#dmg-results')?.textContent || '';
+    assert(result.includes('Smogon Calc local'), 'Nota do motor Smogon nao apareceu');
+    assert(result.includes('guaranteed 3HKO'), 'Descricao do Smogon nao apareceu');
+  });
+
   await step('My Teams carrega galeria e resumo', async () => {
     click('.nav-btn[data-view="my-teams"]');
     await waitFor(() => document.querySelector('#view-my-teams.active'), 'My Teams ativo');

@@ -28,6 +28,8 @@ Essa ordem importa. Os modulos de tela assumem que dados locais, regras de gerac
 
 `storage.js` e o unico modulo que fala com IndexedDB. Outros modulos chamam `TeamStorage`.
 
+`smogonCalcAdapter.js` encapsula o bundle local do `@smogon/calc`. Ele traduz o estado do Damage Simulator para objetos do motor (`Pokemon`, `Move` e `Field`) e devolve um formato simples para a UI. Regra competitiva nova deve entrar ali antes de virar logica manual duplicada.
+
 `app.js` e o shell: navega views, inicializa modulos, troca geracao global e expoe modais globais.
 
 ## Estado
@@ -38,7 +40,7 @@ Cada modulo de tela possui seu proprio estado em memoria:
 - Analyzer: seis slots simples para tipos, Tera e golpes.
 - Builder: seis slots completos, modo Champions, time em edicao e draft local.
 - My Teams: lista filtrada, time atual no detalhe.
-- Damage Simulator: move carregado, stats carregados e modificadores do formulario.
+- Damage Simulator: move carregado, stats carregados, modificadores do formulario e selecao de geracao exata do calculo.
 
 Nao compartilhe objetos mutaveis de estado entre modulos. Quando um fluxo precisa transferir dados, use uma representacao serializavel e clara, como o draft Analyzer -> Builder.
 
@@ -91,3 +93,7 @@ Quando possivel, prefira `textContent`. Use `innerHTML` apenas para templates qu
 - mensagem de ativacao com `isUpdate` para evitar toast falso em primeira instalacao.
 
 Sempre incremente `CACHE_VERSION` quando adicionar/remover arquivos cacheados.
+
+## Vendor local
+
+O Damage Simulator vendoriza `@smogon/calc` em `vendor/smogon-calc/`. Esses arquivos devem ser tratados como dependencias externas congeladas: nao edite o minificado manualmente. Para atualizar, substitua o bundle, confira a licenca declarada no pacote e rode os smoke tests do Damage Simulator.
