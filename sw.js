@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v27';
+const CACHE_VERSION = 'v28';
 const CACHE = `pokebuild-${CACHE_VERSION}`;
 const ASSETS = [
   '.',
@@ -19,7 +19,12 @@ const ASSETS = [
   'vendor/smogon-calc/data/production.min.js?v=27',
   'vendor/smogon-calc/production.min.js?v=27',
   'favicon.svg',
+  'og-image.svg',
+  'icon-192.png',
+  'icon-512.png',
   'manifest.json',
+  'robots.txt',
+  'sitemap.xml',
 ];
 
 self.addEventListener('install', event => {

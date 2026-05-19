@@ -5,14 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PokéBuild – Team Builder & Analyzer</title>
   <meta name="description" content="Ferramentas competitivas de Pokémon: Type Calculator, Team Analyzer, Team Builder, Damage Simulator e gerenciamento de times.">
+  <meta name="theme-color" content="#7c3aed">
 
   <!-- Open Graph / redes sociais -->
   <meta property="og:type"        content="website">
   <meta property="og:title"       content="PokéBuild – Team Builder & Analyzer">
   <meta property="og:description" content="Ferramentas competitivas de Pokémon: Type Calculator, Team Analyzer, Team Builder, Damage Simulator e mais.">
   <meta property="og:image"       content="og-image.svg">
-  <!-- Substitua og:url pela URL real após o deploy -->
+  <!-- Substitua og:url e canonical pela URL real após o deploy no GitHub Pages. -->
   <!-- <meta property="og:url" content="https://seu-dominio.com"> -->
+  <!-- <link rel="canonical" href="https://seu-dominio.com"> -->
 
   <!-- Twitter / X -->
   <meta name="twitter:card"        content="summary_large_image">
@@ -21,6 +23,7 @@
   <meta name="twitter:image"       content="og-image.svg">
 
   <link rel="icon"     href="favicon.svg"   type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -693,7 +696,9 @@
 <script src="js/dmgCalc.js?v=27"></script>
 <script src="js/app.js"></script>
 <script>
-  if (new URLSearchParams(location.search).has('smoke')) {
+  const POKEBUILD_LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+  const POKEBUILD_IS_LOCAL = POKEBUILD_LOCAL_HOSTS.has(location.hostname) || location.hostname.endsWith('.localhost');
+  if (POKEBUILD_IS_LOCAL && new URLSearchParams(location.search).has('smoke')) {
     const smokeScript = document.createElement('script');
     smokeScript.src = 'tests/smoke.js?run=' + Date.now();
     document.body.appendChild(smokeScript);

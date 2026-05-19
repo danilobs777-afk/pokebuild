@@ -2,7 +2,9 @@
   "name": "PokéBuild – Team Builder & Analyzer",
   "short_name": "PokéBuild",
   "description": "Ferramentas competitivas de Pokémon: Type Calculator, Team Analyzer, Team Builder e Damage Simulator.",
+  "id": ".",
   "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#0a0a0f",
   "theme_color": "#7c3aed",
@@ -13,6 +15,18 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
