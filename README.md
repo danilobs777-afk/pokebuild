@@ -77,6 +77,10 @@ The original source code in this repository is released under the MIT License. S
 
 The MIT License covers this project's original code only. It does not grant rights to third-party trademarks, character names, artwork, sprites, data, or intellectual property related to Pokémon or any other external property.
 
+## Affiliate Links
+
+PokéBuild may include Amazon affiliate links for gaming-related products. As an Amazon Associate, I earn from qualifying purchases.
+
 ## Disclaimer
 
 PokéBuild is an unofficial fan-made tool and is not affiliated with, endorsed, sponsored, or approved by Nintendo, Game Freak, Creatures Inc., or The Pokémon Company.

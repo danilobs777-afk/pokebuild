@@ -18,9 +18,11 @@ Damage ranges, type calculations, legality filters, and team analysis are provid
 
 The MIT License in this repository applies only to the original source code written for PokéBuild. It does not grant any license to third-party intellectual property, trademarks, names, sprites, artwork, datasets, APIs, or bundled third-party dependencies.
 
-## Monetization And Affiliate Disclosure
+## Affiliate Disclosure
 
-If PokéBuild later includes advertising, affiliate links, sponsorships, or paid recommendations, those relationships should be disclosed clearly near the relevant content or link.
+PokéBuild includes Amazon affiliate links. As an Amazon Associate, I earn from qualifying purchases.
+
+Affiliate links are disclosed near the relevant recommendations. Product availability, product pages, and prices are controlled by Amazon and may change without notice.
 
 ## No Legal Advice
 
