@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-# Add an absolute Sitemap URL after the GitHub Pages domain is confirmed.
+Sitemap: https://danilobs777-afk.github.io/pokebuild/sitemap.xml
