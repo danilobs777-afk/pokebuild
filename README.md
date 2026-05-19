@@ -1,60 +1,84 @@
-# PokeBuild
+# PokéBuild
 
-PokeBuild e uma ferramenta competitiva de Pokemon feita em HTML, CSS e JavaScript puro. O app roda 100% no browser, consulta a PokeAPI para dados dinamicos e salva times localmente no IndexedDB.
+PokéBuild is a competitive Pokémon toolkit built with plain HTML, CSS, and JavaScript. It runs entirely in the browser, uses PokéAPI for dynamic data, and stores saved teams locally with IndexedDB.
 
-## Modulos
+Live app:
 
-- Type Calc: calcula efetividade defensiva e ofensiva por Pokemon, tipos manuais e Tera Type.
-- Team Analyzer: monta uma visao rapida de cobertura, matchup, fraquezas e sinergia defensiva.
-- Team Builder: cria times completos, valida habilidades/golpes via PokeAPI e exporta/importa formato Smogon.
-- My Teams: lista, filtra, detalha, exporta, edita e exclui times salvos localmente.
-- Damage Simulator: calcula ranges de dano com bundle local do Smogon Calc, rolls 85-100%, geracao exata, formato Singles/Doubles, Tera, campo, itens, habilidades e status principais.
+https://danilobs777-afk.github.io/pokebuild/
 
-## Regras globais
+## Features
 
-A gen-bar e uma regra de produto global, nao apenas visual. Ela afeta:
+- **Type Calc**: defensive and offensive type effectiveness for Pokémon, manual type pairs, forms, and Tera Type.
+- **Team Analyzer**: offensive coverage, matchup view, defensive weaknesses, and defensive synergy for six-member teams.
+- **Team Builder**: complete team editor with Pokémon, ability, item, nature, EVs/SPs, IVs, moves, Tera Type, forms, Mega Evolution support, Z-Crystals, Gigantamax export, and Smogon import/export.
+- **My Teams**: local team gallery backed by IndexedDB, with search, detail view, export, edit, rename, and delete actions.
+- **Damage Simulator**: local Smogon Calc-powered damage ranges, 16 rolls, exact generation selection, Singles/Doubles, field effects, hazards, Tera, Z-Moves, Max Moves, Dynamax, abilities, items, and end-of-turn chip/recovery.
 
-- tipos disponiveis;
-- tabela de efetividade;
-- sprites/arte exibidos;
-- formatos de jogo disponiveis no Builder;
-- campos de Builder que existem em cada geracao;
-- filtros de legalidade de golpes por version-group da PokeAPI.
+## Tech Stack
 
-Use `GenerationRules` para consultar essas regras. Evite espalhar checks como `gen >= 3` em modulos novos.
+- HTML, CSS, and JavaScript only
+- 100% client-side
+- PokéAPI for Pokémon and move data
+- IndexedDB for local team storage
+- Local vendored `@smogon/calc` bundle for the Damage Simulator
+- GitHub Pages for static hosting
 
-## Estrutura
+## Running Locally
 
-- `index.html`: marcação dos modulos e registro do service worker.
-- `css/style.css`: layout, componentes e responsividade.
-- `js/data.js`: tabelas locais e helpers puros de dominio.
-- `js/generation.js`: contrato central da gen-bar, formatos e capacidades por geracao.
-- `js/ui.js`: helpers compartilhados de interface, autocomplete, toast, confirm e escape HTML.
-- `js/api.js`: acesso a PokeAPI e caches em memoria.
-- `js/storage.js`: IndexedDB para times salvos.
+From the project root:
+
+```bash
+python -m http.server 4174
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4174/
+```
+
+Smoke tests are available only on local hosts:
+
+```text
+http://127.0.0.1:4174/?smoke
+```
+
+The smoke runner covers the main app flow, including generation rules, Builder import, Damage Simulator, Analyzer to Builder, My Teams export/copy, and a small mobile overflow check.
+
+## Project Structure
+
+- `index.html`: app markup, script loading, PWA registration, and local smoke gate.
+- `css/style.css`: layout, components, theme, and responsiveness.
+- `js/data.js`: local domain tables, Smogon parsing/export helpers, and static Pokémon data.
+- `js/generation.js`: shared generation rules, game/version mapping, and feature gates.
+- `js/ui.js`: shared UI helpers, autocomplete behavior, escaping, toasts, and confirm modals.
+- `js/api.js`: PokéAPI access and in-memory caches.
+- `js/storage.js`: IndexedDB persistence.
 - `js/typeCalc.js`: Type Calc.
 - `js/analyzer.js`: Team Analyzer.
 - `js/builder.js`: Team Builder.
 - `js/teams.js`: My Teams.
-- `js/smogonCalcAdapter.js`: adaptador do bundle local do Smogon Calc para o Damage Simulator.
+- `js/smogonCalcAdapter.js`: adapter between the UI state and the local Smogon Calc bundle.
 - `js/dmgCalc.js`: Damage Simulator.
-- `sw.js`: cache PWA.
-- `tests/smoke.js`: smoke tests de navegador.
+- `tests/smoke.js`: browser smoke tests.
+- `vendor/smogon-calc/`: local third-party damage calculation bundle.
 
-## Como testar
+## Maintenance Notes
 
-Abra o app localmente e rode:
+- Use `GenerationRules` for generation-dependent behavior instead of duplicating `gen >= ...` checks.
+- Use `PokeBuildUI.bindAutocomplete()` for new autocomplete fields.
+- Escape user-controlled text with `PokeBuildUI.escapeHtml()` before inserting it with `innerHTML`.
+- Keep `CACHE_VERSION` in `sw.js` moving when cached assets change.
+- The app has no backend and must not contain private tokens, secrets, or credentials.
 
-```text
-http://127.0.0.1:4174/?smoke=1
-```
+## License
 
-O painel no canto inferior esquerdo deve mostrar `PASS` em todos os fluxos.
+The original source code in this repository is released under the MIT License. See [LICENSE](LICENSE).
 
-## Notas de manutencao
+The MIT License covers this project's original code only. It does not grant rights to third-party trademarks, character names, artwork, sprites, data, or intellectual property related to Pokémon or any other external property.
 
-- Prefira `PokeBuildUI.bindAutocomplete()` para novos autocompletes.
-- Use `PokeBuildUI.escapeHtml()` antes de inserir texto do usuario via `innerHTML`.
-- Use `GenerationRules.capabilitiesForGame()` para campos condicionais do Builder.
-- Use `GenerationRules.moveVersionGroups()` para filtrar golpes por jogo/formato.
-- O Damage Simulator usa `@smogon/calc` vendorizado localmente e mantem um fallback interno para nao quebrar a UX quando algum dado nao resolve.
+## Disclaimer
+
+PokéBuild is an unofficial fan-made tool and is not affiliated with, endorsed, sponsored, or approved by Nintendo, Game Freak, Creatures Inc., or The Pokémon Company.
+
+See [DISCLAIMER.md](DISCLAIMER.md) for details.
