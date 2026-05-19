@@ -1,5 +1,6 @@
-# Claude Code local settings
+# Local assistant settings
 .claude/
+.codex/
 
 # Reference files (HTML prototypes, not part of the app)
 _references/
