@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v31';
+const CACHE_VERSION = 'v32';
 const CACHE = `pokebuild-${CACHE_VERSION}`;
 const ASSETS = [
   '.',
@@ -25,6 +25,7 @@ const ASSETS = [
   'manifest.json',
   'robots.txt',
   'sitemap.xml',
+  'googlee63ea8f6dc3e3167.html',
 ];
 
 self.addEventListener('install', event => {
