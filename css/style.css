@@ -172,7 +172,6 @@ body::before {
 .affiliate-rail {
   position: fixed;
   top: 124px;
-  right: max(14px, calc((100vw - 1020px) / 2 - 220px));
   z-index: 8;
   width: 190px;
   max-height: calc(100vh - 142px);
@@ -183,6 +182,12 @@ body::before {
   background: rgba(18,18,26,0.92);
   box-shadow: 0 18px 44px rgba(0,0,0,0.34);
   backdrop-filter: blur(8px);
+}
+.affiliate-rail-left {
+  left: max(14px, calc((100vw - 1020px) / 2 - 220px));
+}
+.affiliate-rail-right {
+  right: max(14px, calc((100vw - 1020px) / 2 - 220px));
 }
 .affiliate-head {
   display: grid;
@@ -251,10 +256,11 @@ body::before {
     position: relative;
     top: auto;
     right: auto;
+    left: auto;
     width: auto;
     max-width: 1020px;
     max-height: none;
-    margin: 0 auto 56px;
+    margin: 0 auto 16px;
     padding: 14px 20px;
     border-left: 0;
     border-right: 0;
@@ -263,6 +269,9 @@ body::before {
   }
   .affiliate-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .affiliate-rail:last-of-type {
+    margin-bottom: 56px;
   }
 }
 
