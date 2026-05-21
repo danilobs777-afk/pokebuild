@@ -33,7 +33,10 @@ const App = (() => {
     if (viewId === 'my-teams') TeamsView.refresh();
     if (viewId === 'builder') Builder.loadDraft();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    requestAffiliateRailSync();
   }
+
+  let requestAffiliateRailSync = () => {};
 
   function requestNavigate(viewId, options = {}) {
     const runNavigation = () => {
@@ -143,21 +146,34 @@ const App = (() => {
     const desktopRails = window.matchMedia('(min-width: 1421px)');
     let scrollFrame = 0;
 
+    const getScrollMetrics = () => {
+      const scrolling = document.scrollingElement || document.documentElement || document.body;
+      const scrollTop = scrolling?.scrollTop || window.pageYOffset || window.scrollY || 0;
+      const scrollHeight = Math.max(
+        scrolling?.scrollHeight || 0,
+        document.documentElement.scrollHeight || 0,
+        document.body.scrollHeight || 0
+      );
+      return {
+        scrollTop,
+        maxScroll: Math.max(1, scrollHeight - window.innerHeight)
+      };
+    };
+
     const syncRails = () => {
       if (!desktopRails.matches) {
         rails.forEach(rail => { rail.scrollTop = 0; });
         return;
       }
-      const page = document.documentElement;
-      const pageMax = Math.max(1, page.scrollHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, window.scrollY / pageMax));
+      const { scrollTop, maxScroll } = getScrollMetrics();
+      const progress = Math.min(1, Math.max(0, scrollTop / maxScroll));
       rails.forEach(rail => {
         const railMax = Math.max(0, rail.scrollHeight - rail.clientHeight);
         rail.scrollTop = Math.round(railMax * progress);
       });
     };
 
-    const requestSync = () => {
+    requestAffiliateRailSync = () => {
       if (scrollFrame) return;
       scrollFrame = requestAnimationFrame(() => {
         scrollFrame = 0;
@@ -165,10 +181,12 @@ const App = (() => {
       });
     };
 
-    window.addEventListener('scroll', requestSync, { passive: true });
-    window.addEventListener('resize', requestSync);
-    desktopRails.addEventListener?.('change', requestSync);
-    requestSync();
+    window.addEventListener('scroll', requestAffiliateRailSync, { passive: true });
+    document.addEventListener('scroll', requestAffiliateRailSync, { passive: true });
+    window.visualViewport?.addEventListener('scroll', requestAffiliateRailSync, { passive: true });
+    window.addEventListener('resize', requestAffiliateRailSync);
+    desktopRails.addEventListener?.('change', requestAffiliateRailSync);
+    requestAffiliateRailSync();
   }
 
   let _exportFilename = 'time';
