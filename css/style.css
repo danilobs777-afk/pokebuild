@@ -131,6 +131,30 @@ body::before {
 .nav-btn-extra:hover  { border-color: rgba(249,115,22,0.4); color: var(--orange); }
 .nav-btn-extra.active { background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.5); color: var(--orange); }
 
+.donate-callout {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.donate-callout a {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #0070ba;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.18s, transform 0.18s;
+}
+.donate-callout a:hover {
+  background: #005ea6;
+  transform: translateY(-1px);
+}
+
 /* ── Gen bar ── */
 .gen-bar {
   display: flex;
@@ -276,6 +300,9 @@ body::before {
 }
 
 @media(max-width: 760px) {
+  .donate-callout span { display: none; }
+  .donate-callout a { padding: 4px 7px; }
+
   .affiliate-rail {
     margin-bottom: 44px;
     padding: 14px 12px;
