@@ -136,6 +136,41 @@ const App = (() => {
     });
   }
 
+  function initAffiliateRailScroll() {
+    const rails = Array.from(document.querySelectorAll('.affiliate-rail'));
+    if (!rails.length) return;
+
+    const desktopRails = window.matchMedia('(min-width: 1421px)');
+    let scrollFrame = 0;
+
+    const syncRails = () => {
+      if (!desktopRails.matches) {
+        rails.forEach(rail => { rail.scrollTop = 0; });
+        return;
+      }
+      const page = document.documentElement;
+      const pageMax = Math.max(1, page.scrollHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, window.scrollY / pageMax));
+      rails.forEach(rail => {
+        const railMax = Math.max(0, rail.scrollHeight - rail.clientHeight);
+        rail.scrollTop = Math.round(railMax * progress);
+      });
+    };
+
+    const requestSync = () => {
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        syncRails();
+      });
+    };
+
+    window.addEventListener('scroll', requestSync, { passive: true });
+    window.addEventListener('resize', requestSync);
+    desktopRails.addEventListener?.('change', requestSync);
+    requestSync();
+  }
+
   let _exportFilename = 'time';
 
   function showExportModal(text, filename) {
@@ -155,6 +190,7 @@ const App = (() => {
     initTabs();
     initModals();
     initGenSelector();
+    initAffiliateRailScroll();
     TypeCalc.init();
     Analyzer.init();
     Builder.init();
