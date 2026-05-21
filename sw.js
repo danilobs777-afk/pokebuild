@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v44';
+const CACHE_VERSION = 'v45';
 const CACHE = `pokebuild-${CACHE_VERSION}`;
 const ASSETS = [
   '.',
