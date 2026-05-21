@@ -279,12 +279,22 @@ body::before {
   .affiliate-rail {
     margin-bottom: 44px;
     padding: 14px 12px;
+    overflow: hidden;
   }
   .affiliate-list {
-    grid-template-columns: 1fr;
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 2px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
   }
   .affiliate-card {
+    flex: 0 0 min(78vw, 260px);
     min-height: 0;
+    scroll-snap-align: start;
   }
 }
 
