@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'v53';
+const CACHE_VERSION = 'v54';
 const CACHE = `pokebuild-${CACHE_VERSION}`;
 const ASSETS = [
   '.',
   'index.html',
-  'css/style.css?v=53',
+  'css/style.css?v=54',
   'js/data.js',
   'js/generation.js',
   'js/ui.js',

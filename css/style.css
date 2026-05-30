@@ -161,7 +161,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: 4px;
+  margin-left: auto;
   color: var(--text-dim);
   font-size: 0.64rem;
   line-height: 1.05;
@@ -187,7 +187,7 @@ body::before {
   transform: translateY(-1px);
 }
 
-@media(max-width: 980px) {
+@media(max-width: 1180px) {
   .donate-callout span { display: none; }
 }
 
