@@ -147,9 +147,15 @@ body::before {
   gap: 6px;
   margin-left: 10px;
   color: var(--text-dim);
-  font-size: 0.68rem;
-  line-height: 1;
-  white-space: nowrap;
+  font-size: 0.58rem;
+  line-height: 1.05;
+  white-space: normal;
+  text-align: right;
+  flex: 0 0 auto;
+}
+.donate-callout span {
+  display: block;
+  max-width: 140px;
 }
 .donate-callout a {
   padding: 4px 8px;
@@ -163,6 +169,10 @@ body::before {
 .donate-callout a:hover {
   background: #005ea6;
   transform: translateY(-1px);
+}
+
+@media(max-width: 1180px) {
+  .donate-callout span { display: none; }
 }
 
 /* ── Gen bar ── */
@@ -1812,7 +1822,11 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
 
 @media(max-width: 520px) {
   .app-nav {
-    height: 48px;
+    height: auto;
+    min-height: 82px;
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 4px;
     padding: 0 10px;
   }
   .nav-logo {
@@ -1824,16 +1838,24 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
     display: none;
   }
   .nav-links {
+    order: 3;
+    flex: 0 0 100%;
+    justify-content: space-between;
+    overflow-x: visible;
     scrollbar-width: none;
   }
   .nav-links::-webkit-scrollbar { display: none; }
+  .nav-sep {
+    display: none;
+  }
   .nav-btn {
-    padding: 5px 8px;
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
+    flex: 1 1 0;
+    padding: 5px 3px;
+    font-size: 0.58rem;
+    letter-spacing: 0.03em;
   }
   .gen-bar {
-    top: 48px;
+    top: 82px;
     padding: 5px 10px;
     overflow-x: auto;
     scrollbar-width: none;
