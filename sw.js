@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v49';
+const CACHE_VERSION = 'v50';
 const CACHE = `pokebuild-${CACHE_VERSION}`;
 const ASSETS = [
   '.',
@@ -10,11 +10,11 @@ const ASSETS = [
   'js/api.js',
   'js/storage.js',
   'js/typeCalc.js',
-  'js/analyzer.js',
-  'js/builder.js',
-  'js/teams.js',
-  'js/smogonCalcAdapter.js?v=27',
-  'js/dmgCalc.js?v=27',
+  'js/analyzer.js?v=50',
+  'js/builder.js?v=50',
+  'js/teams.js?v=50',
+  'js/smogonCalcAdapter.js?v=50',
+  'js/dmgCalc.js?v=50',
   'js/app.js',
   'vendor/smogon-calc/data/production.min.js?v=27',
   'vendor/smogon-calc/production.min.js?v=27',

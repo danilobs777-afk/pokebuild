@@ -67,7 +67,7 @@ const Analyzer = (() => {
           <option value="">Tipo 2</option>${typeOpts}
         </select>
         <select class="select-input az-tera" data-slot="${i}">
-          <option value="">Tera</option>${typeOpts}
+          <option value="">Tipo Tera</option>${typeOpts}
         </select>
       </div>
       <div class="divider-moves">Golpes (por tipo)</div>
@@ -184,7 +184,7 @@ const Analyzer = (() => {
       if (!card) return;
       slot.type1 = setTypeSelectOptions(card.querySelector(`.az-type1[data-slot="${si}"]`), 'Tipo 1', slot.type1);
       slot.type2 = setTypeSelectOptions(card.querySelector(`.az-type2[data-slot="${si}"]`), 'Tipo 2', slot.type2);
-      slot.tera = setTypeSelectOptions(card.querySelector(`.az-tera[data-slot="${si}"]`), 'Tera', slot.tera);
+      slot.tera = setTypeSelectOptions(card.querySelector(`.az-tera[data-slot="${si}"]`), 'Tipo Tera', slot.tera);
       slot.moves.forEach((move, mi) => {
         move.mtype = setTypeSelectOptions(
           card.querySelector(`.az-mtype[data-slot="${si}"][data-move="${mi}"]`),
@@ -758,7 +758,7 @@ const Analyzer = (() => {
           : '<span class="empty">nenhum</span>'}</div>
       </div>
       <div class="cov-section cov-r">
-        <h3>✗ Gap (${gap.length})</h3>
+        <h3>✗ Sem cobertura (${gap.length})</h3>
         <div class="type-list">${gap.length
           ? gap.map(t => `<span class="tc t-${t}">${t}</span>`).join('')
           : '<span class="empty">cobertura perfeita!</span>'}</div>
@@ -831,10 +831,10 @@ const Analyzer = (() => {
         <div class="sum-item s-y"><span class="cnt">${neuCount}</span><span class="lbl">Neutro</span></div>
         <div class="sum-item s-r"><span class="cnt">${gapCount}</span><span class="lbl">Sem Cobertura</span></div>
       </div>
-      <div class="note-bar">Melhor resposta por tipo adversário. SE = super efetivo. ★ = STAB. <span style="color:var(--red)">Vermelho</span> = SE+STAB. <span style="color:var(--yellow)">Amarelo</span> = SE s/ STAB. Sugestão considera o tipo defensivo do atacante.</div>
+      <div class="note-bar">Melhor resposta por tipo adversário. SE = super efetivo. ★ = STAB. <span style="color:var(--red)">Vermelho</span> = SE+STAB. <span style="color:var(--yellow)">Amarelo</span> = SE sem STAB. A sugestão considera o tipo defensivo do atacante.</div>
       <div style="overflow-x:auto;">
         <table class="dtable">
-          <thead><tr><th>Tipo Alvo</th><th>Melhor Resposta</th></tr></thead>
+          <thead><tr><th>Tipo alvo</th><th>Melhor resposta</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -881,17 +881,17 @@ const Analyzer = (() => {
 
     content.innerHTML = `
       <div class="sum-bar s4" style="margin-bottom:16px">
-        <div class="sum-item s-imm"><span class="cnt">${immTotal}</span><span class="lbl">Imune</span><span class="sum-sub">(${avg(immTotal)} / mbr)</span></div>
-        <div class="sum-item s-hlf"><span class="cnt">${resTotal}</span><span class="lbl">Resiste</span><span class="sum-sub">(${avg(resTotal)} / mbr)</span></div>
-        <div class="sum-item s-dbl"><span class="cnt">${dblTotal}</span><span class="lbl">2×</span><span class="sum-sub">(${avg(dblTotal)} / mbr)</span></div>
-        <div class="sum-item s-qd"><span class="cnt">${qdTotal}</span><span class="lbl">4×</span><span class="sum-sub">(${avg(qdTotal)} / mbr)</span></div>
+        <div class="sum-item s-imm"><span class="cnt">${immTotal}</span><span class="lbl">Imune</span><span class="sum-sub">(${avg(immTotal)} / membro)</span></div>
+        <div class="sum-item s-hlf"><span class="cnt">${resTotal}</span><span class="lbl">Resiste</span><span class="sum-sub">(${avg(resTotal)} / membro)</span></div>
+        <div class="sum-item s-dbl"><span class="cnt">${dblTotal}</span><span class="lbl">2×</span><span class="sum-sub">(${avg(dblTotal)} / membro)</span></div>
+        <div class="sum-item s-qd"><span class="cnt">${qdTotal}</span><span class="lbl">4×</span><span class="sum-sub">(${avg(qdTotal)} / membro)</span></div>
       </div>
-      <div class="note-bar" style="margin-bottom:12px">mbr = média por membro. Referência: Imune ≥2 ótimo, &lt;1 fraco. Resiste ≥4 ótimo, &lt;2 fraco. 2× &lt;2 bom, &gt;3 crítico. 4× &lt;0.5 aceitável, ≥1 crítico.<br>Linha <span style="color:var(--red)">Vermelha</span>: 3+ membros expostos ao mesmo tipo. Linha <span style="color:var(--green)">Verde</span>: 2+ membros imunes.</div>
+      <div class="note-bar" style="margin-bottom:12px">Média por membro. Referência: Imune ≥2 ótimo, &lt;1 fraco. Resiste ≥4 ótimo, &lt;2 fraco. 2× &lt;2 bom, &gt;3 crítico. 4× &lt;0.5 aceitável, ≥1 crítico.<br>Linha <span style="color:var(--red)">vermelha</span>: 3+ membros expostos ao mesmo tipo. Linha <span style="color:var(--green)">verde</span>: 2+ membros imunes.</div>
       <div style="overflow-x:auto;">
         <table class="wtable">
           <thead>
             <tr>
-              <th class="th-type">Tipo Atk</th>
+              <th class="th-type">Tipo atacante</th>
               ${slotNames.map(n => `<th>${n.length > 8 ? n.slice(0, 7) + '…' : n}</th>`).join('')}
             </tr>
           </thead>

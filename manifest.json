@@ -1,7 +1,7 @@
 {
   "name": "PokéBuild – Team Builder & Analyzer",
   "short_name": "PokéBuild",
-  "description": "Ferramentas competitivas de Pokémon: Type Calculator, Team Analyzer, Team Builder e Damage Simulator.",
+  "description": "Ferramentas competitivas de Pokémon: Type Calc, Team Analyzer, Team Builder e Damage Calculator.",
   "id": ".",
   "start_url": ".",
   "scope": ".",

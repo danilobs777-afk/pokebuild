@@ -358,17 +358,17 @@ const DmgCalc = (() => {
       </div>
       <div id="${prefix}-base-stats" class="hidden">
         <div class="field-group">
-          <label class="field-label">Base Stats (auto)</label>
+          <label class="field-label">Stats base (auto)</label>
           <div id="${prefix}-stats-row" style="display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--text2);"></div>
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <div class="field-group" style="flex:1;min-width:110px;">
-          <label class="field-label">Nature</label>
+          <label class="field-label">Natureza</label>
           <select class="select-input" id="${prefix}-nature">${natureOpts}</select>
         </div>
         <div class="field-group" style="flex:1;min-width:80px;">
-          <label class="field-label">Level</label>
+          <label class="field-label">Nível</label>
           <input type="number" class="text-input" id="${prefix}-level" value="50" min="1" max="100" style="width:70px">
         </div>
         <div class="field-group" style="flex:1;min-width:80px;">
@@ -376,7 +376,7 @@ const DmgCalc = (() => {
           <input type="number" class="text-input" id="${prefix}-hp-pct" value="100" min="1" max="100" style="width:70px">
         </div>
         <div class="field-group" style="flex:1;min-width:110px;">
-          <label class="field-label">Tera Type</label>
+          <label class="field-label">Tipo Tera</label>
           <select class="select-input" id="${prefix}-tera">${typeOpts}</select>
         </div>
       </div>
@@ -401,7 +401,7 @@ const DmgCalc = (() => {
         </div>
       </div>
       <div class="field-group">
-        <label class="field-label">EVs por Stat</label>
+        <label class="field-label">EVs por stat</label>
         <div class="dmg-ev-grid">
           ${STAT_KEYS.map(k => `
             <div class="dmg-ev-cell">
@@ -411,7 +411,7 @@ const DmgCalc = (() => {
         </div>
       </div>
       <div class="field-group">
-        <label class="field-label">Stat Stages</label>
+        <label class="field-label">Estágios de stat</label>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           ${(() => {
             const stageOpts = [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6]
@@ -423,7 +423,7 @@ const DmgCalc = (() => {
                 <select class="select-input" id="${prefix}-stage-off" style="width:68px">${stageOpts}</select>
               </div>
               <div style="display:flex;align-items:center;gap:5px;">
-                <span style="font-size:12px;color:var(--text2)">Speed</span>
+                <span style="font-size:12px;color:var(--text2)">Velocidade</span>
                 <select class="select-input" id="${prefix}-stage-spe" style="width:68px">${stageOpts}</select>
               </div>`;
           })()}
@@ -443,13 +443,13 @@ const DmgCalc = (() => {
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
         <label class="check-label" style="font-size:12px">
-          <input type="checkbox" id="${prefix}-grounded" checked> No chão (afeta terrain)
+          <input type="checkbox" id="${prefix}-grounded" checked> No chão (afeta campo)
         </label>
         <label class="check-label" style="font-size:12px">
-          <input type="checkbox" id="${prefix}-tailwind"> Tailwind (Speed ×2)
+          <input type="checkbox" id="${prefix}-tailwind"> Tailwind (Velocidade ×2)
         </label>
         <label class="check-label" style="font-size:12px">
-          <input type="checkbox" id="${prefix}-paralyzed"> Paralisia (Speed ×0.5)
+          <input type="checkbox" id="${prefix}-paralyzed"> Paralisia (Velocidade ×0.5)
         </label>
       </div>
     `;
@@ -930,7 +930,7 @@ const DmgCalc = (() => {
     ignoredCheckboxes.forEach(([id, label]) => {
       if (readChecked(id)) ignored.push(label);
     });
-    if (teraValue('dmg-atk') || teraValue('dmg-def')) ignored.push('Tera Type');
+    if (teraValue('dmg-atk') || teraValue('dmg-def')) ignored.push('Tipo Tera');
     if (forcedHits !== 'auto') ignored.push('multi-hit forcado');
     if (readClampedNumber('dmg-spikes', 0, 0, 3) > 0) ignored.push('Spikes');
     if (readSelectValue('dmg-atk-boosted-stat')) ignored.push('boosted stat Atk');
@@ -1141,7 +1141,7 @@ const DmgCalc = (() => {
     const power  = cachedMove.power || 0;
 
     if (!power) {
-      setValidation('error', 'Esse golpe nao tem Base Power calculavel. Escolha um golpe ofensivo.');
+      setValidation('error', 'Esse golpe nao tem poder base calculavel. Escolha um golpe ofensivo.');
       return;
     }
 
@@ -1474,7 +1474,7 @@ const DmgCalc = (() => {
     document.getElementById('dmg-ko-badges').innerHTML = badges.join('');
     renderEngineDetail(endOfTurn.engineDetail);
     document.getElementById('dmg-summary').textContent =
-      `Atk: ${document.getElementById('dmg-atk-name').value || '?'} vs Def: ${document.getElementById('dmg-def-name').value || '?'} · Power ${cachedMove?.power || '?'} · ${cachedMove?.damage_class?.name || '?'}`;
+      `Atk: ${document.getElementById('dmg-atk-name').value || '?'} vs Def: ${document.getElementById('dmg-def-name').value || '?'} · Poder ${cachedMove?.power || '?'} · ${cachedMove?.damage_class?.name || '?'}`;
 
     const notesEl = document.getElementById('dmg-endturn-notes');
     if (notesEl) {
@@ -1501,10 +1501,10 @@ const DmgCalc = (() => {
         notes.push(`Life Orb — atacante perde <strong>${chip} HP</strong> ao final do turno (1/10 de ${atkHp} HP)`);
       }
       if (extraNotes.includes('burn-attack')) {
-        notes.push('Burn ofensivo — dano fisico do atacante reduzido em 50%.');
+        notes.push('Queimadura ofensiva — dano fisico do atacante reduzido em 50%.');
       }
       if (extraNotes.includes('burn-special')) {
-        notes.push('Burn ofensivo marcado — golpes especiais nao sofrem reducao de dano.');
+        notes.push('Queimadura ofensiva marcada — golpes especiais nao sofrem reducao de dano.');
       }
       if (extraNotes.includes('burn-ignored')) {
         notes.push('Guts — burn ofensivo ignorado e Atk fisico aumentado.');
@@ -1513,7 +1513,7 @@ const DmgCalc = (() => {
         notes.push('Guts — atacante com status recebe boost de Atk fisico.');
       }
       if (extraNotes.includes('facade')) {
-        notes.push('Facade — Base Power dobrado por status do atacante.');
+        notes.push('Facade — poder base dobrado por status do atacante.');
       }
       if (extraNotes.includes('sand-spd')) {
         notes.push('Areia — defensor Rock recebe Sp.Def x1.5 contra golpe especial.');
@@ -1586,7 +1586,7 @@ const DmgCalc = (() => {
           const koTag = ko ? ` <span style="color:#4c8;font-size:11px">${ko}</span>` : '';
           return `<div style="font-size:12px;padding:2px 0"><strong>${label}</strong>${probStr}: <strong>${minTotal}–${maxTotal}</strong> (${minPct}–${maxPct}%)${koTag}</div>`;
         }).join('');
-        multiEl.innerHTML = `<div style="font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:600">Multi-Hit</div>${rows}`;
+        multiEl.innerHTML = `<div style="font-size:12px;color:var(--text2);margin-bottom:4px;font-weight:600">Golpes múltiplos</div>${rows}`;
       } else {
         multiEl.innerHTML = '';
       }

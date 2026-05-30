@@ -8,11 +8,11 @@ https://danilobs777-afk.github.io/pokebuild/
 
 ## Features
 
-- **Type Calc**: defensive and offensive type effectiveness for Pokémon, manual type pairs, forms, and Tera Type.
+- **Type Calc**: defensive and offensive type effectiveness for Pokémon, manual type pairs, forms, and Tera typing.
 - **Team Analyzer**: offensive coverage, matchup view, defensive weaknesses, and defensive synergy for six-member teams.
-- **Team Builder**: complete team editor with Pokémon, ability, item, nature, EVs/SPs, IVs, moves, Tera Type, forms, Mega Evolution support, Z-Crystals, Gigantamax export, and Smogon import/export.
+- **Team Builder**: complete team editor with Pokémon, ability, item, nature, EVs/SPs, IVs, moves, Tera typing, forms, Mega Evolution support, Z-Crystals, Gigantamax export, and Smogon import/export.
 - **My Teams**: local team gallery backed by IndexedDB, with search, detail view, export, edit, rename, and delete actions.
-- **Damage Simulator**: local Smogon Calc-powered damage ranges, 16 rolls, exact generation selection, Singles/Doubles, field effects, hazards, Tera, Z-Moves, Max Moves, Dynamax, abilities, items, and end-of-turn chip/recovery.
+- **Damage Calculator**: local Smogon Calc-powered damage ranges, 16 rolls, exact generation selection, Singles/Doubles, field effects, hazards, Tera, Z-Moves, Max Moves, Dynamax, abilities, items, and end-of-turn chip/recovery.
 
 ## Tech Stack
 
@@ -20,7 +20,7 @@ https://danilobs777-afk.github.io/pokebuild/
 - 100% client-side
 - PokéAPI for Pokémon and move data
 - IndexedDB for local team storage
-- Local vendored `@smogon/calc` bundle for the Damage Simulator
+- Local vendored `@smogon/calc` bundle for the Damage Calculator
 - GitHub Pages for static hosting
 
 ## Running Locally
@@ -43,7 +43,7 @@ Smoke tests are available only on local hosts:
 http://127.0.0.1:4174/?smoke
 ```
 
-The smoke runner covers the main app flow, including generation rules, Builder import, Damage Simulator, Analyzer to Builder, My Teams export/copy, and a small mobile overflow check.
+The smoke runner covers the main app flow, including generation rules, Builder import, Damage Calculator, Analyzer to Builder, My Teams export/copy, and a small mobile overflow check.
 
 ## Project Structure
 
@@ -59,7 +59,7 @@ The smoke runner covers the main app flow, including generation rules, Builder i
 - `js/builder.js`: Team Builder.
 - `js/teams.js`: My Teams.
 - `js/smogonCalcAdapter.js`: adapter between the UI state and the local Smogon Calc bundle.
-- `js/dmgCalc.js`: Damage Simulator.
+- `js/dmgCalc.js`: Damage Calculator.
 - `tests/smoke.js`: browser smoke tests.
 - `vendor/smogon-calc/`: local third-party damage calculation bundle.
 

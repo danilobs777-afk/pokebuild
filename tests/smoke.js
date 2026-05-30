@@ -156,18 +156,18 @@ async function runSmoke() {
       '- Thunderbolt',
       '- Volt Switch'
     ].join('\n'));
-    await waitFor(() => document.querySelector('#bld-import-preview')?.textContent.includes('Preview: 1 Pokemon'), 'preview do import');
+    await waitFor(() => document.querySelector('#bld-import-preview')?.textContent.includes('Prévia: 1 Pokémon'), 'preview do import');
     click('#bld-import-cancel');
   });
 
-  await step('Damage Simulator bloqueia calculo sem golpe carregado', async () => {
+  await step('Damage Calculator bloqueia calculo sem golpe carregado', async () => {
     await openView('damage-sim', 'Damage ativo');
     click('#dmg-calc-btn');
     const validation = document.querySelector('#dmg-validation')?.textContent || '';
     assert(validation.includes('Selecione um golpe'), 'Validacao de golpe obrigatorio nao apareceu');
   });
 
-  await step('Damage Simulator usa motor Smogon local', async () => {
+  await step('Damage Calculator usa motor Smogon local', async () => {
     setValue('#dmg-atk-name', 'Charizard');
     setValue('#dmg-def-name', 'Toxapex');
     await loadMove('Earthquake');
@@ -181,7 +181,7 @@ async function runSmoke() {
     assert(detail.includes('guaranteed 3HKO'), 'Descricao do Smogon nao apareceu');
   });
 
-  await step('Damage Simulator trava mecanicas por geracao', async () => {
+  await step('Damage Calculator trava mecanicas por geracao', async () => {
     setSelect('#dmg-calc-gen', '7');
     await waitFor(() => !document.querySelector('#dmg-use-z')?.disabled && document.querySelector('#dmg-use-max')?.disabled, 'travas Gen 7');
     assert(document.querySelector('#dmg-atk-tera')?.disabled, 'Tera deveria ficar bloqueado na Gen 7');
@@ -196,7 +196,7 @@ async function runSmoke() {
     assert(document.querySelector('#dmg-use-z')?.disabled, 'Z-Move deveria ficar bloqueado na Gen 9');
   });
 
-  await step('Damage Simulator mostra pos-turno e KO contextual avancado', async () => {
+  await step('Damage Calculator mostra pos-turno e KO contextual avancado', async () => {
     setSelect('#dmg-calc-gen', '9');
     click('[data-dmg-preset="hazards"]');
     setSelect('#dmg-def-status', 'toxic');
@@ -209,7 +209,7 @@ async function runSmoke() {
     assert(postTurn.includes('Toxic 2/16'), 'Toxic exato nao apareceu no pos-turno');
   });
 
-  await step('Damage Simulator mostra recoil e recovery do motor', async () => {
+  await step('Damage Calculator mostra recoil e recovery do motor', async () => {
     setSelect('#dmg-calc-gen', '9');
     setValue('#dmg-def-name', 'Blissey');
     await loadMove('Flare Blitz');

@@ -145,7 +145,7 @@ const SmogonDamage = (() => {
       if (hasResource(gen, kind, base)) return base;
     }
 
-    throw new Error(`${kind === 'species' ? 'Pokemon' : 'Golpe'} nao encontrado no motor Smogon: ${original}.`);
+    throw new Error(`${kind === 'species' ? 'Pokémon' : 'Golpe'} nao encontrado no motor Smogon: ${original}.`);
   }
 
   function numberOr(value, fallback) {

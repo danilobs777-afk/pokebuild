@@ -167,7 +167,7 @@ const Builder = (() => {
                 <div class="bld-sprite-ph" id="bld-sprite-ph-${i}">?</div>
                 <img class="bld-sprite-img hidden" id="bld-sprite-img-${i}" alt="">
               </div>
-              <button class="bld-shiny-btn${slot.shiny ? ' active' : ''} hidden" data-slot="${i}" title="Shiny">✨</button>
+              <button class="bld-shiny-btn${slot.shiny ? ' active' : ''} hidden" data-slot="${i}" title="Brilhante">✨</button>
             </div>
           </div>
           <div class="autocomplete-wrap" style="flex:1">
@@ -187,7 +187,7 @@ const Builder = (() => {
 
       ${hasTera() ? `
       <div class="field-group" style="margin-bottom:8px">
-        <label class="field-label">✦ Tera Type</label>
+        <label class="field-label">✦ Tipo Tera</label>
         <select class="select-input bld-tera" data-slot="${i}">
           <option value="">— Selecione um tipo —</option>
           ${TYPES.map(t => `<option value="${t}"${slot.teraType === t ? ' selected' : ''}>${t}</option>`).join('')}
@@ -219,12 +219,12 @@ const Builder = (() => {
         </div>` : ''}
       </div>
 
-      <div class="section-divider">Moves</div>
+      <div class="section-divider">Golpes</div>
       <div class="moves-grid">
         ${[0,1,2,3].map(m => `
           <div class="autocomplete-wrap">
             <input type="text" class="text-input bld-move" data-slot="${i}" data-move="${m}"
-              placeholder="Move ${m+1}" value="${slot.moves[m]}" autocomplete="off">
+              placeholder="Golpe ${m+1}" value="${slot.moves[m]}" autocomplete="off">
             <ul class="suggestions hidden bld-move-sug" data-slot="${i}" data-move="${m}"></ul>
           </div>`).join('')}
       </div>
@@ -331,7 +331,7 @@ const Builder = (() => {
 
   function markDirty() {
     dirty = true;
-    setDraftStatus('Alteracoes ainda nao salvas no My Teams.', 'dirty');
+    setDraftStatus('Alteracoes ainda nao salvas em My Teams.', 'dirty');
     clearTimeout(draftTimer);
     draftTimer = setTimeout(saveBuilderDraft, 500);
   }
@@ -1084,7 +1084,7 @@ const Builder = (() => {
         valBox.innerHTML = '<div class="val-success">✓ Time salvo com sucesso! <button type="button" class="btn-secondary btn-sm" id="bld-open-teams-btn">Abrir My Teams</button></div>';
       }
       clearBuilderDraft();
-      markClean('Salvo no My Teams.');
+      markClean('Salvo em My Teams.');
       document.getElementById('bld-open-teams-btn')?.addEventListener('click', () => App.navigate('my-teams'));
     } catch (err) {
       valBox.innerHTML = `<div class="val-error">Erro ao salvar: ${err.message}</div>`;
@@ -1094,7 +1094,7 @@ const Builder = (() => {
   // ── Export ────────────────────────────────────────────────────
   function exportText() {
     const text = smogonTeamText(slots, { isChampions, gen: builderGen() });
-    if (!text) { alert('Nenhum Pokemon configurado para exportar.'); return; }
+    if (!text) { alert('Nenhum Pokémon configurado para exportar.'); return; }
     const exportTeamName = document.getElementById('bld-team-name').value.trim() || 'time';
     App.showExportModal(text, exportTeamName);
   }
@@ -1197,18 +1197,18 @@ const Builder = (() => {
     const parsed = parseSmogonForBuilder(text);
     if (!parsed.length) {
       previewEl.classList.remove('hidden');
-      previewEl.innerHTML = '<div class="import-preview-warning">Nenhum Pokemon reconhecido ainda.</div>';
+      previewEl.innerHTML = '<div class="import-preview-warning">Nenhum Pokémon reconhecido ainda.</div>';
       return;
     }
     const unknown = parsed.map(p => p.name).filter(name => !POKEMON_DB[name]);
     const rows = parsed.map((p, idx) => {
       const moves = p.moves.filter(Boolean).length;
-      const status = POKEMON_DB[p.name] ? `${moves}/4 moves` : 'nao reconhecido';
+      const status = POKEMON_DB[p.name] ? `${moves}/4 golpes` : 'nao reconhecido';
       return `<div class="import-preview-row"><strong>${idx + 1}. ${esc(p.name || '?')}</strong><span>${esc(status)}</span></div>`;
     }).join('');
     previewEl.classList.remove('hidden');
     previewEl.innerHTML = `
-      <div class="import-preview-title">Preview: ${parsed.length} Pokemon${isChampions ? ' (Champions)' : ''}</div>
+      <div class="import-preview-title">Prévia: ${parsed.length} Pokémon${isChampions ? ' (Champions)' : ''}</div>
       ${rows}
       ${unknown.length ? `<div class="import-preview-warning">Ajustar depois: ${unknown.map(esc).join(', ')}</div>` : ''}
     `;

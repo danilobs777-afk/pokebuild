@@ -42,7 +42,7 @@
     <button class="nav-btn" data-view="builder">Team Builder</button>
     <button class="nav-btn" data-view="my-teams">My Teams</button>
     <span class="nav-sep"></span>
-    <button class="nav-btn nav-btn-extra" data-view="damage-sim">Damage Simulator</button>
+    <button class="nav-btn nav-btn-extra" data-view="damage-sim">Damage Calculator</button>
   </div>
   <div class="donate-callout">
     <span>Se o PokéBuild te ajudou, considere contribuir para o projeto</span>
@@ -65,7 +65,7 @@
   <section id="view-type-calc" class="view active">
     <div class="view-header">
       <h1 class="view-title">Type Calc</h1>
-      <p class="view-sub">Pokémon Champions type calculator para tipos, defesas, ofensiva e Tera</p>
+      <p class="view-sub">Calculadora de tipos para defesas, ofensiva e Tera</p>
     </div>
 
     <div class="tc-layout">
@@ -100,7 +100,7 @@
         </div>
 
         <div class="field-group" style="margin-top:12px;">
-          <label class="field-label">✦ Tera Type</label>
+          <label class="field-label">✦ Tipo Tera</label>
           <select id="tc-tera" class="select-input tera-select"></select>
         </div>
         <div class="ttoggle-row" id="tc-tera-toggle-wrap" style="margin-top:10px;opacity:0.35;pointer-events:none;">
@@ -149,7 +149,7 @@
   <section id="view-analyzer" class="view">
     <div class="view-header">
       <h1 class="view-title">Team Analyzer</h1>
-      <p class="view-sub">Analise cobertura ofensiva e defensiva de um time completo</p>
+      <p class="view-sub">Analisador de times para cobertura, fraquezas e sinergia</p>
     </div>
 
     <!-- Team input grid -->
@@ -159,7 +159,7 @@
 
     <div class="az-action-grid">
       <button class="btn-secondary" id="az-import-btn">⬆ Importar Time</button>
-      <button class="btn-secondary" id="az-to-builder-btn" disabled>→ Team Builder</button>
+      <button class="btn-secondary" id="az-to-builder-btn" disabled>→ Enviar ao Team Builder</button>
       <button class="btn-primary"   id="az-analyze-btn">Analisar Time</button>
       <button class="btn-secondary" id="az-clear-btn" disabled>Limpar</button>
     </div>
@@ -198,10 +198,10 @@
     <!-- Results tabs -->
     <div id="az-results" class="hidden">
       <div class="tabs">
-        <button class="tab-btn-ui active" data-tab="az-coverage">Coverage</button>
-        <button class="tab-btn-ui" data-tab="az-matchup">Matchup</button>
-        <button class="tab-btn-ui" data-tab="az-weakness">Weakness</button>
-        <button class="tab-btn-ui" data-tab="az-synergy">Synergy</button>
+        <button class="tab-btn-ui active" data-tab="az-coverage">Cobertura</button>
+        <button class="tab-btn-ui" data-tab="az-matchup">Matchups</button>
+        <button class="tab-btn-ui" data-tab="az-weakness">Fraquezas</button>
+        <button class="tab-btn-ui" data-tab="az-synergy">Sinergia</button>
       </div>
 
       <div id="az-coverage" class="tab-panel active">
@@ -248,7 +248,7 @@
   <section id="view-builder" class="view">
     <div class="view-header">
       <h1 class="view-title">Team Builder</h1>
-      <p class="view-sub">Pokémon Champions team builder para montar builds completas no estilo Smogon</p>
+      <p class="view-sub">Construtor de times para builds completas no formato Smogon</p>
     </div>
 
     <div class="card" style="margin-bottom:18px;">
@@ -284,7 +284,7 @@
     <div class="bld-action-grid">
       <button class="btn-secondary" id="bld-import-btn">⬆ Importar Time</button>
       <button class="btn-secondary" id="bld-export-btn"   disabled>⬇ Exportar Time</button>
-      <button class="btn-primary"   id="bld-validate-btn">Validar &amp; Salvar Time</button>
+      <button class="btn-primary"   id="bld-validate-btn">Validar e salvar time</button>
       <button class="btn-secondary" id="bld-clear-btn"    disabled>Limpar</button>
     </div>
 
@@ -330,11 +330,11 @@
   <section id="view-my-teams" class="view">
     <div class="view-header">
       <h1 class="view-title">My Teams</h1>
-      <p class="view-sub">Times salvos – clique para ver detalhes</p>
+      <p class="view-sub">Meus times salvos no navegador</p>
     </div>
 
     <div class="mt-topbar">
-      <input type="text" id="mt-search" class="text-input" placeholder="Buscar por nome do time ou Pokemon...">
+      <input type="text" id="mt-search" class="text-input" placeholder="Buscar por nome do time ou Pokémon...">
       <div id="mt-summary" class="mt-summary"></div>
     </div>
 
@@ -361,12 +361,12 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════════
-       VIEW 5 – DAMAGE SIMULATOR
+       VIEW 5 – DAMAGE CALCULATOR
   ═══════════════════════════════════════════════════ -->
   <section id="view-damage-sim" class="view">
     <div class="view-header">
-      <h1 class="view-title">Damage Simulator</h1>
-      <p class="view-sub">Pokémon Champions damage calculator com 16 rolls (85–100%) e KO percentual</p>
+      <h1 class="view-title">Damage Calculator</h1>
+      <p class="view-sub">Calculadora de dano para Pokémon Champions com rolls, KOs e modificadores competitivos</p>
     </div>
 
     <div class="dmg-layout">
@@ -378,7 +378,7 @@
         </div>
       </div>
 
-      <!-- Move -->
+      <!-- Golpe -->
       <div class="card" id="dmg-move-card">
         <div class="card-title">Golpe</div>
         <div class="field-group">
@@ -392,7 +392,7 @@
           <div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;">
             <span id="dmg-move-type-pill" class="tpill"></span>
             <span id="dmg-move-category" style="font-size:12px;color:var(--text2);"></span>
-            <span style="font-size:12px;color:var(--text2);">Base Power: <strong id="dmg-move-bp">—</strong></span>
+            <span style="font-size:12px;color:var(--text2);">Poder base: <strong id="dmg-move-bp">—</strong></span>
           </div>
         </div>
         <div class="field-group">
@@ -420,25 +420,25 @@
           <label class="field-label">Modificadores</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <label class="check-label"><input type="checkbox" id="dmg-crit"> Crítico</label>
-            <label class="check-label"><input type="checkbox" id="dmg-burn-atk"> Burn ofensivo</label>
-            <label class="check-label"><input type="checkbox" id="dmg-atk-burn-chip"> Chip burn atacante</label>
+            <label class="check-label"><input type="checkbox" id="dmg-burn-atk"> Queimadura ofensiva</label>
+            <label class="check-label"><input type="checkbox" id="dmg-atk-burn-chip"> Dano de burn no atacante</label>
             <label class="check-label"><input type="checkbox" id="dmg-stab"> STAB</label>
             <label class="check-label"><input type="checkbox" id="dmg-trick-room"> Trick Room</label>
           </div>
         </div>
         <div class="field-group">
-          <label class="field-label">Multi-hit</label>
+          <label class="field-label">Golpes múltiplos</label>
           <select id="dmg-hit-count" class="select-input">
             <option value="auto" selected>Auto pelo golpe</option>
-            <option value="2">Forcar 2 acertos</option>
-            <option value="3">Forcar 3 acertos</option>
-            <option value="4">Forcar 4 acertos</option>
-            <option value="5">Forcar 5 acertos</option>
-            <option value="10">Forcar 10 acertos</option>
+            <option value="2">Forçar 2 acertos</option>
+            <option value="3">Forçar 3 acertos</option>
+            <option value="4">Forçar 4 acertos</option>
+            <option value="5">Forçar 5 acertos</option>
+            <option value="10">Forçar 10 acertos</option>
           </select>
         </div>
         <details class="dmg-advanced">
-          <summary>Avancado</summary>
+          <summary>Avançado</summary>
           <div class="dmg-preset-bar">
             <button type="button" class="btn-secondary dmg-preset-btn" data-dmg-preset="clear">Limpar</button>
             <button type="button" class="btn-secondary dmg-preset-btn" data-dmg-preset="singles">Singles</button>
@@ -513,7 +513,7 @@
               <label class="check-label"><input type="checkbox" id="dmg-def-power-trick"> Power Trick Def</label>
             </div>
             <div class="dmg-advanced-section">
-              <div class="dmg-advanced-title">Parametros</div>
+              <div class="dmg-advanced-title">Parâmetros</div>
               <div class="dmg-inline-control">
                 <span>Boost Atk</span>
                 <select id="dmg-atk-boosted-stat" class="select-input">
@@ -584,7 +584,7 @@
               <option value="snow">Neve (Ice Sp.Def ×1.5)</option>
             </select>
             <select id="dmg-terrain" class="select-input" style="flex:1">
-              <option value="none">Sem terrain</option>
+              <option value="none">Sem campo</option>
               <option value="electric-terrain">Campo Elétrico (Elec ×1.3)</option>
               <option value="grassy-terrain">Campo Gramado (Grass ×1.3 / EQ ×0.5)</option>
               <option value="psychic-terrain">Campo Psíquico (Psy ×1.3)</option>
@@ -593,7 +593,7 @@
           </div>
         </div>
         <div class="field-group">
-          <label class="field-label">Efetividade de Tipo (fallback manual)</label>
+          <label class="field-label">Efetividade de tipo (fallback manual)</label>
           <select id="dmg-eff" class="select-input">
             <option value="0">0× (imune)</option>
             <option value="0.25">¼× (dupla resist)</option>
@@ -605,7 +605,7 @@
           <div id="dmg-auto-notes" class="dmg-auto-notes"></div>
         </div>
         <div class="field-group">
-          <label class="field-label">Status do Defensor (end-of-turn)</label>
+          <label class="field-label">Status do defensor (fim do turno)</label>
           <select id="dmg-def-status" class="select-input">
             <option value="none">Nenhum</option>
             <option value="poison">Envenenado (1/8 HP/turno)</option>
@@ -614,7 +614,7 @@
           </select>
         </div>
         <div class="field-group">
-          <label class="field-label">Item passivo do Defensor</label>
+          <label class="field-label">Item passivo do defensor</label>
           <select id="dmg-def-passive-item" class="select-input">
             <option value="none">Nenhum</option>
             <option value="leftovers">Leftovers (+1/16 HP/turno)</option>
@@ -623,7 +623,7 @@
             <option value="grassy-seed">Grassy Seed / Terrain Seed</option>
           </select>
         </div>
-        <button class="btn-primary" id="dmg-calc-btn" style="margin-top:12px;width:100%">Calcular Dano</button>
+        <button class="btn-primary" id="dmg-calc-btn" style="margin-top:12px;width:100%">Calcular dano</button>
         <div id="dmg-validation" class="dmg-validation hidden" role="status" aria-live="polite"></div>
       </div>
 
@@ -784,13 +784,13 @@
 <script src="js/api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/typeCalc.js"></script>
-<script src="js/analyzer.js"></script>
-<script src="js/builder.js"></script>
-<script src="js/teams.js"></script>
+<script src="js/analyzer.js?v=50"></script>
+<script src="js/builder.js?v=50"></script>
+<script src="js/teams.js?v=50"></script>
 <script src="vendor/smogon-calc/data/production.min.js?v=27"></script>
 <script src="vendor/smogon-calc/production.min.js?v=27"></script>
-<script src="js/smogonCalcAdapter.js?v=27"></script>
-<script src="js/dmgCalc.js?v=27"></script>
+<script src="js/smogonCalcAdapter.js?v=50"></script>
+<script src="js/dmgCalc.js?v=50"></script>
 <script src="js/app.js"></script>
 <script>
   const POKEBUILD_LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);

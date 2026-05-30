@@ -42,8 +42,8 @@ const TeamsView = (() => {
     const showing = visible.length;
     const members = visible.reduce((sum, team) => sum + memberCount(team), 0);
     el.textContent = searchQuery.trim()
-      ? `${showing} de ${total} times · ${members} Pokemon`
-      : `${total} ${total === 1 ? 'time salvo' : 'times salvos'} · ${members} Pokemon`;
+      ? `${showing} de ${total} times · ${members} Pokémon`
+      : `${total} ${total === 1 ? 'time salvo' : 'times salvos'} · ${members} Pokémon`;
   }
 
   function categoryLabel(category) {
@@ -234,8 +234,8 @@ const TeamsView = (() => {
 
     const moves = (m.moves || []).filter(mv => mv.trim());
     const traits = [
-      m.gender === 'female' ? 'Female' : '',
-      m.shiny ? 'Shiny' : '',
+      m.gender === 'female' ? 'Fêmea' : '',
+      m.shiny ? 'Brilhante' : '',
       m.name?.endsWith('-Gmax') ? 'Gigantamax' : ''
     ].filter(Boolean);
 
@@ -251,12 +251,12 @@ const TeamsView = (() => {
       </div>
       <div class="build-fields">
         ${m.ability ? `<div class="build-field"><span class="build-field-label">Habilidade:</span> ${escHtml(m.ability)}</div>` : ''}
-        ${m.teraType ? `<div class="build-field"><span class="build-field-label">Tera Type:</span> <span class="tpill t-${escHtml(m.teraType)} mt-mini-pill">${escHtml(m.teraType)}</span></div>` : ''}
-        ${m.nature ? `<div class="build-field"><span class="build-field-label">Nature:</span> ${escHtml(m.nature)}</div>` : ''}
+        ${m.teraType ? `<div class="build-field"><span class="build-field-label">Tipo Tera:</span> <span class="tpill t-${escHtml(m.teraType)} mt-mini-pill">${escHtml(m.teraType)}</span></div>` : ''}
+        ${m.nature ? `<div class="build-field"><span class="build-field-label">Natureza:</span> ${escHtml(m.nature)}</div>` : ''}
         ${ivLine}
       </div>
       <div class="build-moves">
-        ${moves.length ? moves.map(mv => `<div class="build-move" data-move="${escHtml(mv)}"><span class="mt-move-name">${escHtml(mv)}</span><span class="mt-move-badges"></span></div>`).join('') : '<div class="build-move muted">Sem moves</div>'}
+        ${moves.length ? moves.map(mv => `<div class="build-move" data-move="${escHtml(mv)}"><span class="mt-move-name">${escHtml(mv)}</span><span class="mt-move-badges"></span></div>`).join('') : '<div class="build-move muted">Sem golpes</div>'}
       </div>
       <div class="build-ev-section">
         <div class="build-field-label">${evLabel}s · ${evTotal}</div>
