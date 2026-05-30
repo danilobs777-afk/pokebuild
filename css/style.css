@@ -95,7 +95,17 @@ body::before {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-right: 16px;
+  margin-right: 0;
+  white-space: nowrap;
+}
+
+.nav-author {
+  margin-right: 12px;
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
   white-space: nowrap;
 }
 
@@ -1809,6 +1819,9 @@ input::placeholder { color: var(--text-dim); font-weight: 400; }
     font-size: 0.95rem;
     letter-spacing: 0.06em;
     margin-right: 4px;
+  }
+  .nav-author {
+    display: none;
   }
   .nav-links {
     scrollbar-width: none;
